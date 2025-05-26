@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
   "id": "b3640fa1-a79d-489c-887e-63d465f45631",
-  "alias": "DemoWebPart",
+  "alias": "InternalDevelopmentWebPart",
   "componentType": "WebPart",
   "version": "*",
   "manifestVersion": 2,
@@ -19,11 +19,11 @@
     {
       "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
       "group": { "default": "Advanced" },
-      "title": { "default": "Demo" },
-      "description": { "default": "Demo description" },
+      "title": { "default": "InternalDevelopment" },
+      "description": { "default": "InternalDevelopment description" },
       "officeFabricIconFontName": "Page",
       "properties": {
-        "description": "Demo"
+        "description": "InternalDevelopment"
       }
     }
   ]

@@ -3,7 +3,7 @@ import { Provider } from "react-redux";
 import App from "./App";
 import { store } from "./Redux/Store";
 
-const Demo = (props: any): JSX.Element => {
+const InternalDevelopment = (props: any): JSX.Element => {
   return (
     <div className="main">
       <Provider store={store}>
@@ -13,4 +13,4 @@ const Demo = (props: any): JSX.Element => {
   );
 };
 
-export default Demo;
+export default InternalDevelopment;

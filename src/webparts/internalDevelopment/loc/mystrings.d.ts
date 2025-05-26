@@ -1,4 +1,4 @@
-declare interface IDemoWebPartStrings {
+declare interface IInternalDevelopmentWebPartStrings {
   PropertyPaneDescription: string;
   BasicGroupName: string;
   DescriptionFieldLabel: string;
@@ -13,7 +13,7 @@ declare interface IDemoWebPartStrings {
   UnknownEnvironment: string;
 }
 
-declare module 'DemoWebPartStrings' {
-  const strings: IDemoWebPartStrings;
+declare module "InternalDevelopmentWebPartStrings" {
+  const strings: IInternalDevelopmentWebPartStrings;
   export = strings;
 }

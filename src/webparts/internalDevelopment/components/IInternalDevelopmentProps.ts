@@ -1,6 +1,6 @@
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
-export interface IDemoProps {
+export interface IInternalDevelopmentProps {
   description: string;
   isDarkTheme: boolean;
   environmentMessage: string;

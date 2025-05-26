@@ -8,12 +8,12 @@
       "@microsoft/teams-js": "2.12.0"
     },
     "version": "1.18.2",
-    "libraryName": "node-18",
+    "libraryName": "InternalDevelopment",
     "libraryId": "1dff2059-4672-4d13-a555-d0194753d2fb",
     "environment": "spo",
     "packageManager": "npm",
-    "solutionName": "Node18",
-    "solutionShortDescription": "Node18 description",
+    "solutionName": "crm",
+    "solutionShortDescription": "crm description",
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
     "componentType": "webpart"

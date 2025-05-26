@@ -7,20 +7,20 @@ import {
 } from "@microsoft/sp-property-pane";
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import { IReadonlyTheme } from "@microsoft/sp-component-base";
-import * as strings from "DemoWebPartStrings";
-import Demo from "./components/Demo";
-import { IDemoProps } from "./components/IDemoProps";
+import * as strings from "InternalDevelopmentWebPartStrings";
+import InternalDevelopment from "./components/InternalDevelopment";
+import { IInternalDevelopmentProps } from "./components/IInternalDevelopmentProps";
 import { SPComponentLoader } from "@microsoft/sp-loader";
 require("../../../node_modules/primereact/resources/primereact.min.css");
 require("../../ExternalRef/CSS/Style.css");
 import "primereact/resources/themes/bootstrap4-light-blue/theme.css";
 import { sp } from "@pnp/sp/presets/all";
 
-export interface IDemoWebPartProps {
+export interface IInternalDevelopmentWebPartProps {
   description: string;
 }
 
-export default class DemoWebPart extends BaseClientSideWebPart<IDemoWebPartProps> {
+export default class InternalDevelopmentWebPart extends BaseClientSideWebPart<IInternalDevelopmentWebPartProps> {
   private _isDarkTheme: boolean = false;
   private _environmentMessage: string = "";
 
@@ -43,7 +43,7 @@ export default class DemoWebPart extends BaseClientSideWebPart<IDemoWebPartProps
   }
 
   public render(): void {
-    const element: React.ReactElement<IDemoProps> = React.createElement(Demo, {
+    const element: React.ReactElement<IInternalDevelopmentProps> = React.createElement(InternalDevelopment, {
       description: this.properties.description,
       isDarkTheme: this._isDarkTheme,
       environmentMessage: this._environmentMessage,
