@@ -1,0 +1,515 @@
+#workbenchPageContent {
+    max-width: 100%;
+}
+
+.content_3f3fd3c2,
+.CanvasZone {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+
+#spCommandBar {
+    display: none !important;
+}
+
+.spAppAndPropertyPanelContainer .sp-appBar {
+    display: none !important;
+}
+
+[data-automation-id="CanvasZone-SectionContainer"] {
+    padding: 0px !important;
+}
+
+[data-automation-id="contentScrollRegion"] {
+    overflow-y: hidden !important;
+}
+
+div[data-sp-feature-tag="Site header host"] {
+    display: none !important;
+}
+
+/* Callout Styles */
+.import_collOut .ms-Callout-beak {
+    border-top: 1px solid #00a99d !important;
+    border-left: 1px solid #00a99d !important;
+    box-shadow: none !important;
+    z-index: 1 !important;
+}
+
+.import_collOut .ms-Callout-beakCurtain {
+    border-radius: 5px !important;
+    border: 1px solid #00a99d !important;
+}
+
+/* Scroll Bar */
+*::-webkit-scrollbar {
+    height: 5px;
+    width: 5px;
+}
+
+*::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background-color: #d4d4d4;
+}
+
+.DetailslistText {
+    width: 100%;
+    text-wrap: balance;
+}
+
+.ms-DetailsRow-cell {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.ms-Suggestions-title {
+    color: #000 !important;
+}
+
+/* Pagenation*/
+.pagination .ms-Button {
+    border: none !important;
+    background: none !important;
+    min-width: 0 !important;
+    padding: 5px !important;
+    color: #605e5c;
+    margin: 12px 0px;
+}
+
+.pagination .ms-Button.ms-Button--primary .ms-Button-label {
+    color: #fff;
+    background: #00a99d;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.img img {
+    width: 40px;
+    height: 40px;
+}
+
+.status,
+.days,
+.time {
+    font-size: 14px;
+    margin-bottom: 7px;
+}
+
+.card_right {
+    width: auto;
+    float: left;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.Converstion .status {
+    background: #fff1de;
+    color: #494949;
+    padding: 3px 10px;
+    border-radius: 18px;
+}
+
+.Analysis .status {
+    background: #c8ebdd;
+    color: #494949;
+    padding: 3px 10px;
+    border-radius: 18px;
+}
+
+.Quote .status {
+    background: #cfd8f0;
+    color: #494949;
+    padding: 3px 10px;
+    border-radius: 18px;
+}
+
+.Won .status {
+    background: #eac8d7;
+    color: #494949;
+    padding: 3px 10px;
+    border-radius: 18px;
+}
+
+.Lost .status {
+    background: #eac8d7;
+    color: #494949;
+    padding: 3px 10px;
+    border-radius: 18px;
+}
+
+.App {
+    text-align: center;
+    background: #fbfcfd;
+    height: 100vh;
+    padding: 40px 0px;
+}
+
+h4 {
+    font-size: 12px;
+    margin-top: 0px;
+    color: #416183;
+}
+
+.task {
+    border: 1px solid white;
+    margin: 10px;
+    box-shadow: 1px 3px 10px gray;
+    height: 8vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Prime React */
+.p-inputtext:enabled:focus {
+    box-shadow: 0 0 5px 0px rgb(0 169 157);
+    border-color: #00a99d;
+}
+
+.p-button:focus {
+    box-shadow: 0 0 5px 0px rgb(0 169 157);
+}
+
+.p-autocomplete-panel .p-autocomplete-items .p-autocomplete-item {
+    text-overflow: ellipsis;
+    font-size: 12px !important;
+}
+
+.p-autocomplete-panel .p-autocomplete-items .p-autocomplete-item:hover {
+    color: #00a99d;
+    background: #e9ecef !important;
+}
+
+.all_search .p-icon-field>.p-input-icon {
+    margin-top: -0.35rem !important;
+    font-size: 12px !important;
+}
+
+.all_search .p-inputtext {
+    padding: 4px 3px 6px 32px !important;
+    border: 1px solid #00a99d !important;
+    height: 32px;
+    font-size: 14px !important;
+}
+
+.p-disabled,
+.p-component:disabled {
+    opacity: 1 !important;
+}
+
+.ContactMultiChoice .p-autocomplete-multiple-container {
+    width: 100%;
+    border: 1px solid #00a99d;
+    border-radius: 6px;
+    height: max-content;
+    min-height: 58px;
+    max-height: 88px;
+    overflow: auto;
+    cursor: auto;
+}
+
+.ContactMultiDisabledChoice .p-autocomplete-multiple-container {
+    width: 100%;
+    border: 1px solid #afafaf;
+    border-radius: 6px;
+    height: max-content;
+    min-height: 58px;
+    max-height: 88px;
+    overflow: auto;
+    cursor: auto;
+}
+
+.p-autocomplete .p-autocomplete-multiple-container:not(.p-disabled).p-focus {
+    box-shadow: none;
+}
+
+.ContactMultiChoice .p-autocomplete-token {
+    background: #00a99d;
+    font-size: 12px !important;
+}
+
+.ContactMultiDisabledChoice .p-autocomplete-token {
+    background: #afafaf;
+    font-size: 12px !important;
+}
+
+.p-virtualscroller {
+    height: 206px !important;
+    min-height: 48px !important;
+}
+
+/* Prime React Data Table Design */
+.p-datatable-table {
+    border: 1px solid #ebebeb;
+    border-bottom-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+}
+
+.p-datatable .p-datatable-thead>tr>th {
+    background: #e8fffd !important;
+    border-width: 0px 0px 0px 0px !important;
+    padding: 12px;
+}
+
+.p-datatable .p-datatable-tbody>tr:hover {
+    background: #E4FEFF;
+}
+
+.p-datatable .p-column-header-content {
+    font-size: 14px;
+    color: #6a6a6a;
+}
+
+.p-datatable .p-sortable-column.p-highlight {
+    color: #000;
+}
+
+.p-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
+    color: #00a99d;
+}
+
+.p-datatable .p-sortable-column .p-sortable-column-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.p-datatable .p-datatable-tbody>tr>td {
+    font-size: 12px;
+    padding: 10px;
+}
+
+.data_table_1536 .p-datatable .p-datatable-tbody>tr>td {
+    padding: 10px;
+}
+
+.data_table_1396 .p-datatable .p-datatable-tbody>tr>td {
+    padding: 8px;
+}
+
+.p-datatable-row-expansion:hover {
+    background: transparent !important;
+}
+
+.p-datatable-row-expansion .p-datatable-thead>tr>th {
+    background: #c7dbec59 !important;
+}
+
+.p-datatable .p-datatable-tbody>tr>td .p-row-toggler {
+    width: 26px;
+    height: 20px;
+}
+
+/* Drop Down */
+.drpDown .p-dropdown {
+    border: 1px solid #00A99D !important;
+}
+
+.dropDownDisabled .p-dropdown {
+    border: 1px solid #afafaf !important;
+}
+
+.p-dropdown:not(.p-disabled).p-focus {
+    box-shadow: 0 0 5px 0px rgb(0 169 157);
+}
+
+.dealFormPage .p-dropdown {
+    border-radius: 6px;
+    border-color: #00a99d;
+}
+
+.dealFormPage .p-dropdown .p-dropdown-trigger {
+    background: #00a99d;
+    color: #ffffff;
+}
+
+.dealFormPage .p-dropdown:not(.p-disabled):hover {
+    border-color: #00a99d;
+}
+
+.p-dialog .p-dialog-header .p-dialog-header-icon {
+    color: #ff0000 !important;
+}
+
+.p-dialog .p-dialog-header {
+    border-bottom: none !important;
+    padding: 12px 16px !important;
+}
+
+.p-dialog .p-dialog-content {
+    padding: 10px 16px !important;
+}
+
+.p-dropdown .p-dropdown-label {
+    font-size: 12px !important;
+}
+
+.p-dropdown-item {
+    font-size: 12px !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-title {
+    font-size: 16px !important;
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+    background: #00a99d !important;
+    color: #fff !important;
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item:not(.p-highlight):not(.p-disabled).p-focus {
+    background: #e8fffd !important;
+    color: #00a99d !important;
+}
+
+.p-disabled,
+.p-disabled * {
+    pointer-events: auto !important;
+}
+
+.p-dropdown-panel .p-dropdown-items {
+    padding: 0 !important;
+}
+
+.tableData .p-datatable>.p-datatable-wrapper {
+    overflow: auto;
+    height: calc(100vh - 320px) !important;
+}
+
+.accountChildTable .p-datatable>.p-datatable-wrapper {
+    overflow: auto;
+    height: auto !important;
+}
+
+.drpDown .p-dropdown-trigger {
+    color: #00a99d !important;
+}
+
+.dropDownDisabled .p-dropdown-trigger {
+    color: #afafaf !important;
+}
+
+.p-autocomplete-panel .p-autocomplete-items .p-autocomplete-item.p-highlight {
+    background: #00a99d;
+}
+
+.p-dropdown:not(.p-disabled).p-focus {
+    border-color: #00a99d;
+}
+
+.p-disabled,
+.p-disabled * {
+    cursor: default !important;
+}
+
+/* Funnel Chart */
+.canvasjs-chart-credit {
+    display: none !important;
+}
+
+.canvasjs-chart-tooltip {
+    display: none !important;
+}
+
+.canvasjs-chart-canvas {
+    top: 26px !important;
+}
+
+/* Deal Add Stages */
+.AddStages .p-button {
+    background: #00A99D;
+    border: 1px solid #00A99D;
+}
+
+.AddStages .p-button:hover {
+    background: #00A99D;
+    border: 1px solid #00A99D;
+}
+
+.p-button.p-button-icon-only.p-button-rounded {
+    height: 22px !important;
+}
+
+.stageBtnWidth .p-button.p-button-icon-only {
+    width: 22px !important;
+}
+
+.stageButton .pi {
+    font-size: 12px !important;
+}
+
+/* Tostify */
+.p-toast .p-toast-message.p-toast-message-success {
+    background: rgb(228 248 240 / 87%);
+    border: solid #1ea97c;
+    border-width: 0 0 0 6px;
+    color: #1ea97c;
+}
+
+.p-toast .p-toast-message.p-toast-message-success .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-success .p-toast-icon-close {
+    color: #1ea97c;
+}
+
+.p-toast .p-toast-message.p-toast-message-info {
+    background: rgb(219 234 254 / 88%);
+    border: solid #3b82f6;
+    border-width: 0 0 0 6px;
+    color: #3b82f6;
+}
+
+.p-toast .p-toast-message.p-toast-message-info .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-info .p-toast-icon-close {
+    color: #3b82f6;
+}
+
+.p-toast .p-toast-message.p-toast-message-warn {
+    background: rgb(255 242 226 / 90%);
+    border: solid #cc8925;
+    border-width: 0 0 0 6px;
+    color: #cc8925;
+}
+
+.p-toast .p-toast-message.p-toast-message-warn .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-warn .p-toast-icon-close {
+    color: #cc8925;
+}
+
+.p-toast .p-toast-message.p-toast-message-error {
+    background: rgb(255 231 230 / 93%);
+    border: solid #ff5757;
+    border-width: 0 0 0 6px;
+    color: #ff5757;
+}
+
+.p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
+    color: #ff5757;
+}
+
+/* Responsevie */
+@media only screen and (min-width: 1706px) {
+    .tableData .p-datatable>.p-datatable-wrapper {
+        height: calc(100vh - 400px) !important;
+    }
+
+    .accountChildTable .p-datatable>.p-datatable-wrapper {
+        overflow: auto;
+    }
+}
+
+@media only screen and (min-width: 1920px) {
+    .tableData .p-datatable>.p-datatable-wrapper {
+        height: calc(100vh - 500px) !important;
+    }
+
+    .accountChildTable .p-datatable>.p-datatable-wrapper {
+        overflow: auto;
+    }
+}
