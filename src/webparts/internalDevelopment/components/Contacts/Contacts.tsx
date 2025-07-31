@@ -42,6 +42,7 @@ import {
 import { ConfigPageDefaultValue } from "../Redux/ConfigPageDefaultValue";
 import { useDispatch, useSelector } from "react-redux";
 import { setContactFormData } from "../Redux/PageData";
+import Pagination from "office-ui-fabric-react-pagination";
 
 // Interfaces
 interface IFilterKeys {
@@ -850,7 +851,6 @@ const Contacts = (props: IProps): JSX.Element => {
                 dispatch(setContactFormData(_contactFormData));
                 props.PageNavigation("AddContact");
               }}
-              paginator={displayData.length && data.length > 8 ? true : false}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
               <Column
@@ -965,6 +965,19 @@ const Contacts = (props: IProps): JSX.Element => {
                 }}
               />
             </DataTable>
+          </div>
+          <div className={styles.PageNation}>
+            {displayData.length && data.length > 8 ? (
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={Math.ceil(data.length / pagination.perPage)}
+                onChange={(page: number) => {
+                  paginationData([...data], page, pagination.perPage);
+                }}
+              />
+            ) : (
+              ""
+            )}
           </div>
         </div>
       )}

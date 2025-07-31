@@ -44,6 +44,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { ConfigPageDefaultValue } from "../Redux/ConfigPageDefaultValue";
 import { setAccountFormData, setDealFormData } from "../Redux/PageData";
+import Pagination from "office-ui-fabric-react-pagination";
 
 // Interfaces
 interface IFilterKeys {
@@ -1330,7 +1331,6 @@ const Accounts = (props: IProps): JSX.Element => {
                 dispatch(setAccountFormData(_accountFormData));
                 props.PageNavigation("AddAccount");
               }}
-              paginator={displayData.length && data.length > 8 ? true : false}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
               <Column expander style={{ width: "5rem" }} />
@@ -1436,7 +1436,7 @@ const Accounts = (props: IProps): JSX.Element => {
               />
             </DataTable>
           </div>
-          {/* <div className={styles.PageNation}>
+          <div className={styles.PageNation}>
             {displayData.length && data.length > 8 ? (
               <Pagination
                 currentPage={pagination.currentPage}
@@ -1448,7 +1448,7 @@ const Accounts = (props: IProps): JSX.Element => {
             ) : (
               ""
             )}
-          </div> */}
+          </div>
         </div>
       )}
 
