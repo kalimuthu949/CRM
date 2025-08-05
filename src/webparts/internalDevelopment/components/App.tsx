@@ -15,7 +15,9 @@ import AccountsFormPage from "./Accounts/AccountsFormPage";
 import ContactsFormPage from "./Contacts/ContactsFormPage";
 import LeadsFormPage from "./Leads/LeadsFormPage";
 import Accounts from "./Accounts/Accounts";
-import Contacts from "./Contacts/Contacts";
+//import Contacts from "./Contacts/Contacts";
+import Projects from "./Projects/Projects";
+import ProjectFormPage from "./Projects/ProjectsFormPage";
 import Leads from "./Leads/Leads";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -35,6 +37,7 @@ import { IConfigState, IDealsPageNavigate } from "./Redux/ConfigPageInterfaces";
 import { ConfigPageDefaultValue } from "./Redux/ConfigPageDefaultValue";
 import { setDealData } from "./Redux/PageData";
 import { Toast } from "primereact/toast";
+
 
 // Interfaces
 interface IProps {
@@ -203,12 +206,18 @@ const App = (props: IProps): JSX.Element => {
                     Notify={Notify}
                   />
                 ) : pageName === "Contacts" ? (
-                  <Contacts
+                  // <Contacts
+                  //   spfxContext={props.spfxContext}
+                  //   pageName={pageName}
+                  //   PageNavigation={PageNavigation}
+                  //   Notify={Notify}
+                  // />
+                  <Projects
                     spfxContext={props.spfxContext}
                     pageName={pageName}
                     PageNavigation={PageNavigation}
-                    Notify={Notify}
-                  />
+                    Notify={Notify}/>
+
                 ) : pageName === "Accounts" ? (
                   <Accounts
                     spfxContext={props.spfxContext}
@@ -258,7 +267,14 @@ const App = (props: IProps): JSX.Element => {
                     PageNavigation={PageNavigation}
                     Notify={Notify}
                   />
-                ) : (
+                ) :  pageName === "AddProject" ? (
+                  <ProjectFormPage
+                    spfxContext={props.spfxContext}
+                    pageName={pageName}
+                    PageNavigation={PageNavigation}
+                    Notify={Notify}
+                  />
+                ) :(
                   ""
                 )}
               </div>

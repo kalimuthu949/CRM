@@ -1,0 +1,84 @@
+.lcaBody {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.filterBarAndTableBorder {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filterBtns {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.btnAndText {
+  display: flex;
+  align-items: center;
+}
+
+.btnBackGround {
+  background: #00a99d;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+  &:hover {
+    background: #00897b;
+  }
+}
+
+.tableData {
+  margin-top: 24px;
+}
+
+.noData {
+  color: #888;
+  text-align: center;
+  padding: 24px;
+}
+
+.Actions {
+  display: flex;
+  gap: 8px;
+}
+
+.PageNation {
+  margin-top: 16px;
+}
+
+.projectForm {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formActions {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
