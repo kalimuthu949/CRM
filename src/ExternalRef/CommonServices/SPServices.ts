@@ -46,6 +46,7 @@ import { Web } from "@pnp/sp/webs";
 import "@pnp/sp/site-users/web";
 import "@pnp/sp/site-groups/web";
 import { MSGraphClient } from "@microsoft/sp-http";
+import moment from "moment";
 
 const getAllUsers = async (): Promise<[]> => {
   return await sp.web.siteUsers();
@@ -441,6 +442,14 @@ const getDocLibFiles = async (params: IGetDocLibFiles): Promise<object[]> => {
   return FilesArr;
 };
 
+const GetDateFormat = (date: Date | null): string | null => {
+  if (!date || isNaN(new Date(date).getTime())) {
+    return null;
+  }
+
+  return moment.utc(date).format("YYYY-MM-DDTHH:mm:ss[Z]");
+};
+
 const addDocLibFiles = async (params: IAddDocLibFiles) => {
   let getFilePath: string = params.FilePath;
   if (params.Datas.length) {
@@ -617,9 +626,36 @@ const GetAzureUsersGroups = async (params: IAzureUsers): Promise<any[]> => {
     });
 };
 
+const GenerateFormatId = (
+  prefix: string,
+  lastId: string,
+  padLength: number
+): string => {
+  const currentYear = new Date().getFullYear();
+
+  let lastNumber = 0;
+  let lastYear = currentYear;
+
+  if (lastId) {
+    // Split based on format: prefix + year + number
+    const parts = lastId.replace(prefix, "").split("-");
+    if (parts.length === 2) {
+      lastYear = parseInt(parts[0]);
+      lastNumber = parseInt(parts[1]);
+    }
+  }
+  // If year has changed, reset the number
+  const nextNumber = lastYear === currentYear ? lastNumber + 1 : 1;
+  // Pad the number with zeros
+  const paddedNumber = String(nextNumber).padStart(padLength, "0");
+  return `${prefix}${currentYear}-${paddedNumber}`;
+};
+
 export default {
   getAllUsers,
   SPAddItem,
+  GetDateFormat,
+  GenerateFormatId,
   SPUpdateItem,
   SPDeleteItem,
   SPReadItems,

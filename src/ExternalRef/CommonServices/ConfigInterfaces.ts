@@ -7,4 +7,5 @@ interface IList {
   DealsKanbanOrder: string;
   PipeLineConfig: string;
   PMOpportunity: string;
+  CRMProjects: string;
 }

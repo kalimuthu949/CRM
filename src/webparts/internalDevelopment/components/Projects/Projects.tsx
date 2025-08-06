@@ -1,36 +1,35 @@
+/* eslint-disable react/jsx-no-target-blank */
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-floating-promises */
+/* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable eqeqeq */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @rushstack/no-new-null */
+/* eslint-disable prefer-const */
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import styles from "./Projects.module.scss";
-import { useEffect, useState } from "react";
-import { PrimaryButton } from "office-ui-fabric-react";
-import Loading from "../../../../ExternalRef/Loader/Loading";
+import SPServices from "../../../../ExternalRef/CommonServices/SPServices";
+import { Config } from "../../../../ExternalRef/CommonServices/Config";
+import "../../../../ExternalRef/CSS/Style.css";
+import { IconField } from "primereact/iconfield";
+import { InputIcon } from "primereact/inputicon";
 import { InputText } from "primereact/inputtext";
+import moment from "moment";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import Pagination from "office-ui-fabric-react-pagination";
-
-interface IProjectData {
-  ID: number;
-  ProjectID: string;
-  LeadID: string;
-  AccountName: string;
-  ProjectName: string;
-  StartDate: string;
-  PlannedEndDate: string;
-  ProjectManager: string;
-  ProjectStatus: string;
-  BillingModel: string;
-  BillingContactName: string;
-  BillingContactEmail: string;
-  BillingContactMobile: string;
-  BillingAddress: string;
-  Remarks: string;
-}
-
-interface IPagination {
-  currentPage: number;
-  perPage: number;
-}
-
+import {
+  multiPeoplePickerTemplate,
+  peoplePickerTemplate,
+} from "../../../../ExternalRef/CommonServices/CommonTemplate";
+import {
+  IDelModal,
+  IPeoplePickerDetails,
+  IProjectData,
+} from "../../../../ExternalRef/CommonServices/interface";
+import ProjectFormPage from "./ProjectsFormPage";
+import { Modal, PrimaryButton } from "@fluentui/react";
 interface IProps {
   Notify: (
     type: "info" | "success" | "warn" | "error" | "secondary" | "contrast",
@@ -41,171 +40,317 @@ interface IProps {
   pageName: string;
   PageNavigation: (pageName: string, data?: IProjectData) => void;
 }
-
-const dummyProjects: IProjectData[] = [
-  {
-    ID: 1,
-    ProjectID: "PRJ-2025-001",
-    LeadID: "LD-001",
-    AccountName: "Acme Corp",
-    ProjectName: "CRM Implementation",
-    StartDate: "2025-07-01",
-    PlannedEndDate: "2025-12-31",
-    ProjectManager: "John Doe",
-    ProjectStatus: "Initiated",
-    BillingModel: "Milestone",
-    BillingContactName: "Jane Smith",
-    BillingContactEmail: "jane@acme.com",
-    BillingContactMobile: "1234567890",
-    BillingAddress: "123 Main St, City",
-    Remarks: "Initial phase",
-  },
-  {
-    ID: 2,
-    ProjectID: "PRJ-2025-002",
-    LeadID: "LD-002",
-    AccountName: "Beta Ltd",
-    ProjectName: "Portal Upgrade",
-    StartDate: "2025-08-01",
-    PlannedEndDate: "2026-01-15",
-    ProjectManager: "Alice Lee",
-    ProjectStatus: "Initiated",
-    BillingModel: "Fixed Monthly",
-    BillingContactName: "Bob Brown",
-    BillingContactEmail: "bob@beta.com",
-    BillingContactMobile: "9876543210",
-    BillingAddress: "456 Side St, Town",
-    Remarks: "",
-  },
-];
+//Global Image Variables:
+const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
+const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
+const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
 
 const Projects = (props: IProps): JSX.Element => {
-  const [loader, setLoader] = useState<boolean>(true);
-  const [data, setData] = useState<IProjectData[]>([]);
-  const [displayData, setDisplayData] = useState<IProjectData[]>([]);
-  const [search, setSearch] = useState<string>("");
-  const [pagination, setPagination] = useState<IPagination>({
-    currentPage: 1,
-    perPage: 10,
+  //Local variables:
+  const ScreenWidth: number = window.innerWidth;
+
+  //Local States:
+  const [projectDetails, setProjectDetails] = React.useState<IProjectData[]>(
+    []
+  );
+  const [masterProjectDetails, setMasterProjectDetails] = React.useState<
+    IProjectData[]
+  >([]);
+  const [currentPage, setCurrentPage] = React.useState<"list" | "form">("list");
+  const [selectedData, setSelectedData] = React.useState<IProjectData | null>(
+    null
+  );
+  const [formMode, setFormMode] = React.useState<"add" | "edit" | "view">(
+    "add"
+  );
+  const [isDelModal, setIsDelModal] = React.useState<IDelModal>({
+    isOpen: false,
+    Id: null,
   });
-  
+  const [searchVal, setSearchVal] = React.useState<string>("");
 
-
-  const paginationData = (
-    currData: IProjectData[],
-    currentPage: number,
-    perPage: number
-  ): void => {
-    let startIndex = (currentPage - 1) * perPage;
-    let endIndex = startIndex + perPage;
-    let items = [...currData].slice(startIndex, endIndex);
-    setDisplayData([...items]);
-    setPagination({ currentPage, perPage });
-    setLoader(false);
+  //Get Project Details:
+  const getProjectDetails = () => {
+    SPServices.SPReadItems({
+      Listname: Config.ListNames.CRMProjects,
+      Select:
+        "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName",
+      Expand: "ProjectManager,Lead",
+      Orderby: "Modified",
+      Orderbydecorasc: true,
+      Filter: [
+        {
+          FilterKey: "IsDelete",
+          Operator: "eq",
+          FilterValue: "false",
+        },
+      ],
+    })
+      .then((res: any) => {
+        console.log(res, "response");
+        let projectDetails: IProjectData[] = [];
+        res?.forEach((items: any) => {
+          let _ProjectManager: IPeoplePickerDetails[] = [];
+          if (items?.ProjectManager) {
+            items?.ProjectManager.forEach((user: any) => {
+              _ProjectManager.push({
+                id: user?.Id,
+                name: user?.Title,
+                email: user?.EMail,
+              });
+            });
+          }
+          projectDetails.push({
+            ID: items?.ID,
+            ProjectID: items?.ProjectID,
+            Lead: items?.Lead?.FirstName,
+            LeadId: items?.LeadId,
+            AccountName: items?.AccountName,
+            ProjectName: items?.ProjectName,
+            StartDate: moment(items?.StartDate).format("DD/MM/YYYY"),
+            PlannedEndDate: moment(items?.PlannedEndDate).format("DD/MM/YYYY"),
+            ProjectManager: _ProjectManager ? _ProjectManager : [],
+            ProjectStatus: items?.ProjectStatus,
+            BillingModel: items?.BillingModel,
+          });
+        });
+        setProjectDetails([...projectDetails]);
+        setMasterProjectDetails([...projectDetails]);
+      })
+      .catch((err) => {
+        console.log(err, "getProjectDetails Error in Projects.tsx component");
+      });
   };
 
-  const filterFunction = (value: string) => {
-    let _searchValue = value.toLowerCase();
-    let filtered = data.filter((item) => {
+  //Render Manager Column function:
+  const renderManagersColumn = (rowData: IProjectData) => {
+    const projectManagers: IPeoplePickerDetails[] = rowData?.ProjectManager;
+    return (
+      <div>
+        {rowData?.ProjectManager?.length > 1
+          ? multiPeoplePickerTemplate(projectManagers)
+          : peoplePickerTemplate(projectManagers[0])}
+      </div>
+    );
+  };
+
+  //Delete Particular Item:
+  const TrashItem = () => {
+    const currObj = {
+      IsDelete: true,
+    };
+    SPServices.SPUpdateItem({
+      ID: isDelModal.Id ?? 0,
+      Listname: Config.ListNames.CRMProjects,
+      RequestJSON: currObj,
+    })
+      .then(() => {
+        props.Notify("success", "Success", "Project Deleted successfully");
+        getProjectDetails();
+      })
+      .catch((err) => {
+        console.log(err, "rowData deleted err in projects.tsx component");
+      });
+  };
+
+  //Global Search functionalities:
+  const searchProjectDetails = (val: string) => {
+    setSearchVal(val);
+    if (!val) {
+      setProjectDetails([...masterProjectDetails]);
+      return;
+    }
+
+    const filtered = masterProjectDetails.filter((item) => {
+      const managerNames =
+        item?.ProjectManager?.map((pm) => pm.name?.toLowerCase()).join(" ") ||
+        "";
       return (
-        item.ProjectID.toLowerCase().includes(_searchValue) ||
-        item.ProjectName.toLowerCase().includes(_searchValue) ||
-        item.AccountName.toLowerCase().includes(_searchValue) ||
-        item.ProjectManager.toLowerCase().includes(_searchValue)
+        item.ProjectID?.toLowerCase().includes(val.toLowerCase()) ||
+        item.Lead?.toLowerCase().includes(val.toLowerCase()) ||
+        item.AccountName?.toLowerCase().includes(val.toLowerCase()) ||
+        item.ProjectName?.toLowerCase().includes(val.toLowerCase()) ||
+        item.ProjectStatus?.toLowerCase().includes(val.toLowerCase()) ||
+        item.BillingModel?.toLowerCase().includes(val.toLowerCase()) ||
+        managerNames.includes(val.toLowerCase())
       );
     });
-    paginationData(filtered, 1, pagination.perPage);
+    setProjectDetails(filtered);
   };
 
-    useEffect(() => {
-    setLoader(true);
-    // TODO: Replace with SharePoint API call
-    setTimeout(() => {
-      setData(dummyProjects);
-      paginationData(dummyProjects, 1, pagination.perPage);
-      setLoader(false);
-    }, 500);
+  //Initial Render:
+  React.useEffect(() => {
+    getProjectDetails();
   }, []);
 
   return (
     <>
-      {loader ? (
-        <Loading />
-      ) : (
+      {currentPage === "list" && (
         <div className={styles.lcaBody}>
-          <div className={styles.filterBarAndTableBorder}>
+          <div
+            className={`${styles.filterBarAndTableBorder} 
+          ${ScreenWidth >= 1536 ? styles.filterBar_1536 : styles.filterBar_1396}
+          `}
+          >
             <div className={styles.filterBar}>
               <h2>Projects</h2>
             </div>
             <div className={styles.filterBtns}>
-              <div>
-                <InputText
-                  placeholder="Search"
-                  value={search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setSearch(e.target.value);
-                    filterFunction(e.target.value);
-                  }}
-                />
+              <div className="all_search">
+                <IconField iconPosition="left">
+                  <InputIcon className="pi pi-search"> </InputIcon>
+                  <InputText
+                    value={searchVal}
+                    onChange={(e) => searchProjectDetails(e.target.value)}
+                    v-model="value1"
+                    placeholder="Search"
+                  />
+                </IconField>
               </div>
               <div className={styles.btnAndText}>
                 <div
+                  onClick={() => {
+                    setSelectedData(null);
+                    setFormMode("add");
+                    setCurrentPage("form");
+                  }}
                   className={styles.btnBackGround}
-                  onClick={() => props.PageNavigation("AddProject")}
                 >
-                  + New Project
+                  <img
+                    src={PlusImage}
+                    alt="no image"
+                    style={{ width: "15px", height: "15px" }}
+                  />
+                  New Project
                 </div>
               </div>
             </div>
           </div>
-          <div className={styles.tableData}>
+          <div
+            className={`${styles.tableData} tableData
+              ${ScreenWidth >= 1536 ? "data_table_1536" : "data_table_1396"}`}
+          >
             <DataTable
-              value={displayData}
-              dataKey="ID"
-              emptyMessage={<p className={styles.noData}>No data !!!</p>}
-              onRowClick={(e:any) => {
-                props.PageNavigation("EditProject", e.data);
+              value={projectDetails}
+              paginator={projectDetails && projectDetails?.length > 8}
+              rows={8}
+              onRowClick={(e: any) => {
+                setSelectedData(e.data);
+                setFormMode("view");
+                setCurrentPage("form");
               }}
+              emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
-              <Column field="ProjectID" header="Project ID" sortable />
-              <Column field="ProjectName" header="Project Name" sortable />
-              <Column field="AccountName" header="Account Name" sortable />
-              <Column field="ProjectManager" header="Project Manager" sortable />
-              <Column field="ProjectStatus" header="Status" sortable />
-              <Column field="BillingModel" header="Billing Model" sortable />
-              <Column field="StartDate" header="Start Date" sortable />
-              <Column field="PlannedEndDate" header="Planned End Date" sortable />
+              <Column sortable field="ProjectID" header="Project id" />
+              <Column sortable field="Lead" header="Lead"></Column>
               <Column
-                header="Action"
-                body={(item: IProjectData) => (
-                  <div className={styles.Actions}>
-                    <PrimaryButton
-                      text="Edit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        props.PageNavigation("EditProject", item);
-                      }}
-                    />
-                  </div>
-                )}
-              />
-            </DataTable>
-          </div>
-          <div className={styles.PageNation}>
-            {displayData.length && data.length > 10 ? (
-              <Pagination
-                currentPage={pagination.currentPage}
-                totalPages={Math.ceil(data.length / pagination.perPage)}
-                onChange={(page: number) => {
-                  paginationData([...data], page, pagination.perPage);
+                sortable
+                field="AccountName"
+                header="Account name"
+              ></Column>
+              <Column
+                sortable
+                field="ProjectName"
+                header="Project name"
+              ></Column>
+              <Column sortable field="StartDate" header="Start date"></Column>
+              <Column
+                sortable
+                field="PlannedEndDate"
+                header="End date"
+              ></Column>
+              <Column
+                sortable
+                field="ProjectManager"
+                header="Project manager"
+                body={renderManagersColumn}
+              ></Column>
+              <Column
+                sortable
+                field="ProjectStatus"
+                header="Project status"
+              ></Column>
+              <Column
+                sortable
+                field="BillingModel"
+                header="Billing model"
+              ></Column>
+              <Column
+                field="Action"
+                header="Actions"
+                body={(rowData: IProjectData) => {
+                  return (
+                    <div className={styles.Actions}>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedData(rowData);
+                          setFormMode("edit");
+                          setCurrentPage("form");
+                        }}
+                      >
+                        <img title="Edit" src={EditImage} alt="no image"></img>
+                      </div>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsDelModal({
+                            Id: rowData?.ID,
+                            isOpen: true,
+                          });
+                        }}
+                      >
+                        <img
+                          title="Delete"
+                          src={DeleteImage}
+                          alt="no image"
+                        ></img>
+                      </div>
+                    </div>
+                  );
                 }}
-              />
-            ) : (
-              ""
-            )}
+              ></Column>
+            </DataTable>
           </div>
         </div>
       )}
+      {currentPage === "form" && (
+        <ProjectFormPage
+          data={selectedData}
+          isAdd={formMode === "add"}
+          isEdit={formMode === "edit"}
+          isView={formMode === "view"}
+          goBack={() => setCurrentPage("list")}
+          spfxContext={props.spfxContext}
+          Notify={props.Notify}
+          refresh={getProjectDetails}
+        />
+      )}
+      <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>
+        <p className={styles.delmsg}>
+          Are you sure, you want to delete this Project?
+        </p>
+        <div className={styles.modalBtnSec}>
+          <PrimaryButton
+            text="No"
+            className={styles.cancelBtn}
+            onClick={() => {
+              setIsDelModal({ isOpen: false, Id: null });
+            }}
+          />
+          <PrimaryButton
+            text="Yes"
+            className={styles.addBtn}
+            onClick={() => {
+              setIsDelModal((pre) => ({
+                ...pre,
+                isOpen: false,
+              }));
+              TrashItem();
+            }}
+          />
+        </div>
+      </Modal>
     </>
   );
 };
