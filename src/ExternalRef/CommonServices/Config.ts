@@ -3,7 +3,11 @@ import {
   IDatePickerStyles,
   IPeoplePickerItemSelectedStyles,
 } from "@fluentui/react";
-import { ICRMProjectsListDrop } from "./interface";
+import {
+  IBillingsDetails,
+  ICRMBillingsListDrop,
+  ICRMProjectsListDrop,
+} from "./interface";
 import { IModalStyles } from "office-ui-fabric-react";
 
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -17,6 +21,7 @@ export namespace Config {
     DealsKanbanOrder: "DealsKanbanOrder",
     PipeLineConfig: "PipeLineConfig",
     PMOpportunity: "PMOpportunity",
+    CRMBillings: "CRMBillings",
   };
   export const CRMOwners: string = "Admins";
   export const CRMManagersGroup: string = "Managers";
@@ -28,6 +33,13 @@ export namespace Config {
     BillingModel: [],
   };
 
+  //CRMBillings List DropDown:
+  export const CRMBillingsDropDown: ICRMBillingsListDrop = {
+    Status: [],
+    Currency: [],
+    BillingFrequency: [],
+  };
+
   //Modal popup Style:
   export const delModalStyle: Partial<IModalStyles> = {
     main: {
@@ -35,6 +47,26 @@ export namespace Config {
       width: "25%",
       padding: "20px",
     },
+  };
+
+  //Billing Details Configurations:
+  export const CRMBillingsDetails: IBillingsDetails = {
+    ID: 0,
+    MileStoneName: "",
+    MileStoneDescription: "",
+    DueDate: "",
+    Amount: null,
+    Status: "",
+    ReminderDaysBeforeDue: "",
+    Notes: "",
+    Currency: "",
+    MonthlyAmount: 0,
+    StartMonth: "",
+    EndMonth: "",
+    BillingFrequency: "",
+    ResourceType: "",
+    Rate: 0,
+    ProjectId: 0,
   };
 }
 

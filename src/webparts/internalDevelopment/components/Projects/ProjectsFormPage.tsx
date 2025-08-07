@@ -38,19 +38,18 @@ const ProjectFormPage = (props: any) => {
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
   );
-  const [
-    initialCRMProjectsListDropContainer,
-    setinitialCRMProjectsListDropContainer,
-  ] = useState<ICRMProjectsListDrop>({
-    ...Config.CRMProjectsDropDown,
-  });
   //Local States:
   const [leadOptions, setLeadOptions] = useState<IBasicDropDown[]>([]);
   const [formData, setFormData] = useState<any>({});
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
-  console.log(formData, "formData");
+  const [
+    initialCRMProjectsListDropContainer,
+    setinitialCRMProjectsListDropContainer,
+  ] = useState<ICRMProjectsListDrop>({
+    ...Config.CRMProjectsDropDown,
+  });
 
   //Get All choices from Project List:
   const getAllChoices = () => {

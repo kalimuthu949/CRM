@@ -30,6 +30,7 @@ import {
 } from "../../../../ExternalRef/CommonServices/interface";
 import ProjectFormPage from "./ProjectsFormPage";
 import { Modal, PrimaryButton } from "@fluentui/react";
+import Billings from "../Billings/Billings";
 interface IProps {
   Notify: (
     type: "info" | "success" | "warn" | "error" | "secondary" | "contrast",
@@ -44,6 +45,7 @@ interface IProps {
 const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
 const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
 const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
+const BillingImage: string = require("../../../../ExternalRef/Images/bill.png");
 
 const Projects = (props: IProps): JSX.Element => {
   //Local variables:
@@ -56,7 +58,9 @@ const Projects = (props: IProps): JSX.Element => {
   const [masterProjectDetails, setMasterProjectDetails] = React.useState<
     IProjectData[]
   >([]);
-  const [currentPage, setCurrentPage] = React.useState<"list" | "form">("list");
+  const [currentPage, setCurrentPage] = React.useState<
+    "list" | "form" | "BillingList"
+  >("list");
   const [selectedData, setSelectedData] = React.useState<IProjectData | null>(
     null
   );
@@ -87,7 +91,6 @@ const Projects = (props: IProps): JSX.Element => {
       ],
     })
       .then((res: any) => {
-        console.log(res, "response");
         let projectDetails: IProjectData[] = [];
         res?.forEach((items: any) => {
           let _ProjectManager: IPeoplePickerDetails[] = [];
@@ -306,6 +309,19 @@ const Projects = (props: IProps): JSX.Element => {
                           alt="no image"
                         ></img>
                       </div>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedData(rowData);
+                          setCurrentPage("BillingList");
+                        }}
+                      >
+                        <img
+                          title="Billings"
+                          src={BillingImage}
+                          alt="no image"
+                        ></img>
+                      </div>
                     </div>
                   );
                 }}
@@ -324,6 +340,14 @@ const Projects = (props: IProps): JSX.Element => {
           spfxContext={props.spfxContext}
           Notify={props.Notify}
           refresh={getProjectDetails}
+        />
+      )}
+      {currentPage === "BillingList" && (
+        <Billings
+          data={selectedData}
+          goBack={() => setCurrentPage("list")}
+          spfxContext={props.spfxContext}
+          Notify={props.Notify}
         />
       )}
       <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>

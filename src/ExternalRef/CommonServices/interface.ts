@@ -29,7 +29,33 @@ export interface ICRMProjectsListDrop {
   BillingModel: IBasicDropDown[];
 }
 
+export interface ICRMBillingsListDrop {
+  Status: IBasicDropDown[];
+  Currency: IBasicDropDown[];
+  BillingFrequency: IBasicDropDown[];
+}
+
 export interface IDelModal {
   isOpen: boolean;
   Id: number | null;
+}
+
+//CRMBillings List Interface:
+export interface IBillingsDetails {
+  ID: number;
+  MileStoneName: string;
+  MileStoneDescription: string;
+  DueDate: string;
+  Amount: null;
+  Status: string;
+  ReminderDaysBeforeDue: string;
+  Notes: string;
+  Currency: string;
+  MonthlyAmount: number;
+  StartMonth: string;
+  EndMonth: string;
+  BillingFrequency: string;
+  ResourceType: string;
+  Rate: number;
+  ProjectId: number;
 }

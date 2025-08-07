@@ -8,4 +8,5 @@ interface IList {
   PipeLineConfig: string;
   PMOpportunity: string;
   CRMProjects: string;
+  CRMBillings: string;
 }

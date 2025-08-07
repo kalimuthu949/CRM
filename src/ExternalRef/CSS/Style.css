@@ -318,7 +318,11 @@ h4 {
 .p-dropdown:not(.p-disabled).p-focus {
   box-shadow: 0 0 5px 0px rgb(0 169 157);
 }
-
+.dealFormPage .p-inputtextarea {
+  width: 70%;
+  border: 1px solid #00a99d;
+  border-radius: 6px;
+}
 .dealFormPage .p-dropdown {
   border-radius: 6px;
   border-color: #00a99d;
