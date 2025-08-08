@@ -25,7 +25,6 @@ import {
 import SPServices from "../../../../ExternalRef/CommonServices/SPServices";
 import {
   IBasicDropDown,
-  ICRMProjectsListDrop,
   IPeoplePickerDetails,
 } from "../../../../ExternalRef/CommonServices/interface";
 import { IConfigState } from "../Redux/ConfigPageInterfaces";
@@ -34,6 +33,7 @@ import { sp } from "@pnp/sp";
 // import { PrincipalType } from "@pnp/sp";
 
 const ProjectFormPage = (props: any) => {
+  console.log(props?.data, "projectFormRowDatas");
   // Local Variables:
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
@@ -44,63 +44,6 @@ const ProjectFormPage = (props: any) => {
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [
-    initialCRMProjectsListDropContainer,
-    setinitialCRMProjectsListDropContainer,
-  ] = useState<ICRMProjectsListDrop>({
-    ...Config.CRMProjectsDropDown,
-  });
-
-  //Get All choices from Project List:
-  const getAllChoices = () => {
-    SPServices.SPGetChoices({
-      Listname: Config.ListNames.CRMProjects,
-      FieldName: "ProjectStatus",
-    })
-      .then((res: any) => {
-        let tempProjectStatus: IBasicDropDown[] = [];
-        if (res?.Choices?.length) {
-          res?.Choices?.forEach((val: any) => {
-            tempProjectStatus.push({
-              name: val,
-            });
-          });
-        }
-        setinitialCRMProjectsListDropContainer(
-          (prev: ICRMProjectsListDrop) => ({
-            ...prev,
-            projectStaus: tempProjectStatus,
-          })
-        );
-        SPServices.SPGetChoices({
-          Listname: Config.ListNames.CRMProjects,
-          FieldName: "BillingModel",
-        })
-          .then((res: any) => {
-            let tempBillingModel: IBasicDropDown[] = [];
-            if (res?.Choices?.length) {
-              res?.Choices?.forEach((val: any) => {
-                tempBillingModel.push({
-                  name: val,
-                });
-              });
-            }
-            setinitialCRMProjectsListDropContainer(
-              (prev: ICRMProjectsListDrop) => ({
-                ...prev,
-                BillingModel: tempBillingModel,
-              })
-            );
-            getLeads();
-          })
-          .catch((err) => {
-            console.log(err, "Get choice error from CRMProjects list");
-          });
-      })
-      .catch((err) => {
-        console.log(err, "Get choice error from CRMProjects list");
-      });
-  };
 
   //Data refresh and goBack mainPage function:
   const emptyDatas = () => {
@@ -168,21 +111,6 @@ const ProjectFormPage = (props: any) => {
       ...prevErrors,
       [field]: !isValidField(field, value),
     }));
-  };
-
-  //Convert DatePickerShowValue :
-  const convertDMYtoDate = (dateInput: any): Date | undefined => {
-    try {
-      if (typeof dateInput === "string") {
-        const [day, month, year] = dateInput.split("/");
-        return new Date(`${year}-${month}-${day}`);
-      } else if (dateInput instanceof Date) {
-        return dateInput;
-      }
-    } catch (error) {
-      console.error("Invalid date input:", error);
-    }
-    return undefined;
   };
 
   //RowData is once comming then data set to the state:
@@ -338,7 +266,7 @@ const ProjectFormPage = (props: any) => {
 
   //Initial Render:
   React.useEffect(() => {
-    getAllChoices();
+    getLeads();
     if (!props?.data) {
       setFormData({
         ProjectID: "",
@@ -348,7 +276,7 @@ const ProjectFormPage = (props: any) => {
         StartDate: null,
         PlannedEndDate: null,
         ProjectManager: [],
-        ProjectStatus: "",
+        ProjectStatus: "Initiated",
         BillingModel: "",
       });
     }
@@ -424,9 +352,7 @@ const ProjectFormPage = (props: any) => {
             <Label>Start date</Label>
             <DatePicker
               value={
-                formData?.StartDate
-                  ? convertDMYtoDate(formData?.StartDate)
-                  : undefined
+                formData?.StartDate ? new Date(formData.StartDate) : undefined
               }
               styles={
                 errorMessage["StartDate"]
@@ -450,7 +376,7 @@ const ProjectFormPage = (props: any) => {
             <DatePicker
               value={
                 formData?.PlannedEndDate
-                  ? convertDMYtoDate(formData?.PlannedEndDate)
+                  ? new Date(formData?.PlannedEndDate)
                   : undefined
               }
               styles={
@@ -498,10 +424,9 @@ const ProjectFormPage = (props: any) => {
           <div className={`${styles.allField} dealFormPage`}>
             <Label>Project Status</Label>
             <Dropdown
-              options={initialCRMProjectsListDropContainer?.projectStaus}
+              options={props?.initialCRMProjectsListDropContainer?.projectStaus}
               optionLabel="name"
-              // value={{ name: formData?.ProjectStatus }}
-              value={initialCRMProjectsListDropContainer?.projectStaus.find(
+              value={props?.initialCRMProjectsListDropContainer?.projectStaus.find(
                 (item) => item.name === formData?.ProjectStatus
               )}
               onChange={(e) => handleOnChange("ProjectStatus", e?.value?.name)}
@@ -516,10 +441,10 @@ const ProjectFormPage = (props: any) => {
           <div className={`${styles.allField} dealFormPage`}>
             <Label>Billing model</Label>
             <Dropdown
-              options={initialCRMProjectsListDropContainer?.BillingModel}
+              options={props?.initialCRMProjectsListDropContainer?.BillingModel}
               optionLabel="name"
               // value={{ name: formData?.BillingModel }}3
-              value={initialCRMProjectsListDropContainer?.BillingModel.find(
+              value={props?.initialCRMProjectsListDropContainer?.BillingModel.find(
                 (item) => item.name === formData?.BillingModel
               )}
               onChange={(e) => handleOnChange("BillingModel", e?.value?.name)}

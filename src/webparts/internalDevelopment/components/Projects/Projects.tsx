@@ -11,7 +11,10 @@
 import * as React from "react";
 import styles from "./Projects.module.scss";
 import SPServices from "../../../../ExternalRef/CommonServices/SPServices";
-import { Config } from "../../../../ExternalRef/CommonServices/Config";
+import {
+  Config,
+  RefreshButton,
+} from "../../../../ExternalRef/CommonServices/Config";
 import "../../../../ExternalRef/CSS/Style.css";
 import { IconField } from "primereact/iconfield";
 import { InputIcon } from "primereact/inputicon";
@@ -24,6 +27,8 @@ import {
   peoplePickerTemplate,
 } from "../../../../ExternalRef/CommonServices/CommonTemplate";
 import {
+  IBasicDropDown,
+  ICRMProjectsListDrop,
   IDelModal,
   IPeoplePickerDetails,
   IProjectData,
@@ -31,6 +36,8 @@ import {
 import ProjectFormPage from "./ProjectsFormPage";
 import { Modal, PrimaryButton } from "@fluentui/react";
 import Billings from "../Billings/Billings";
+import { Dropdown } from "primereact/dropdown";
+import Loading from "../../../../ExternalRef/Loader/Loading";
 interface IProps {
   Notify: (
     type: "info" | "success" | "warn" | "error" | "secondary" | "contrast",
@@ -46,6 +53,8 @@ const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
 const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
 const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
 const BillingImage: string = require("../../../../ExternalRef/Images/bill.png");
+const FilterImage: string = require("../../../../ExternalRef/Images/filter.png");
+const FilterNoneImage: string = require("../../../../ExternalRef/Images/filternone.png");
 
 const Projects = (props: IProps): JSX.Element => {
   //Local variables:
@@ -72,6 +81,22 @@ const Projects = (props: IProps): JSX.Element => {
     Id: null,
   });
   const [searchVal, setSearchVal] = React.useState<string>("");
+  const [filterBar, setFilterBar] = React.useState<boolean>(false);
+  const [filterValues, setFilterValues] = React.useState({
+    ProjectID: "",
+    Lead: "",
+    AccountName: "",
+    ProjectStatus: "",
+    BillingModel: "",
+  });
+  console.log(filterValues, "filterValues");
+  const [
+    initialCRMProjectsListDropContainer,
+    setinitialCRMProjectsListDropContainer,
+  ] = React.useState<ICRMProjectsListDrop>({
+    ...Config.CRMProjectsDropDown,
+  });
+  const [loader, setLoader] = React.useState<boolean>(false);
 
   //Get Project Details:
   const getProjectDetails = () => {
@@ -110,8 +135,8 @@ const Projects = (props: IProps): JSX.Element => {
             LeadId: items?.LeadId,
             AccountName: items?.AccountName,
             ProjectName: items?.ProjectName,
-            StartDate: moment(items?.StartDate).format("DD/MM/YYYY"),
-            PlannedEndDate: moment(items?.PlannedEndDate).format("DD/MM/YYYY"),
+            StartDate: items?.StartDate,
+            PlannedEndDate: items?.PlannedEndDate,
             ProjectManager: _ProjectManager ? _ProjectManager : [],
             ProjectStatus: items?.ProjectStatus,
             BillingModel: items?.BillingModel,
@@ -119,9 +144,61 @@ const Projects = (props: IProps): JSX.Element => {
         });
         setProjectDetails([...projectDetails]);
         setMasterProjectDetails([...projectDetails]);
+        getAllChoices();
       })
       .catch((err) => {
         console.log(err, "getProjectDetails Error in Projects.tsx component");
+      });
+  };
+
+  //Get All Choices in CRMProjects list:
+  const getAllChoices = () => {
+    SPServices.SPGetChoices({
+      Listname: Config.ListNames.CRMProjects,
+      FieldName: "ProjectStatus",
+    })
+      .then((res: any) => {
+        let tempProjectStatus: IBasicDropDown[] = [];
+        if (res?.Choices?.length) {
+          res?.Choices?.forEach((val: any) => {
+            tempProjectStatus.push({
+              name: val,
+            });
+          });
+        }
+        setinitialCRMProjectsListDropContainer(
+          (prev: ICRMProjectsListDrop) => ({
+            ...prev,
+            projectStaus: tempProjectStatus,
+          })
+        );
+        SPServices.SPGetChoices({
+          Listname: Config.ListNames.CRMProjects,
+          FieldName: "BillingModel",
+        })
+          .then((res: any) => {
+            let tempBillingModel: IBasicDropDown[] = [];
+            if (res?.Choices?.length) {
+              res?.Choices?.forEach((val: any) => {
+                tempBillingModel.push({
+                  name: val,
+                });
+              });
+            }
+            setinitialCRMProjectsListDropContainer(
+              (prev: ICRMProjectsListDrop) => ({
+                ...prev,
+                BillingModel: tempBillingModel,
+              })
+            );
+            setLoader(false);
+          })
+          .catch((err) => {
+            console.log(err, "Get choice error from CRMProjects list");
+          });
+      })
+      .catch((err) => {
+        console.log(err, "Get choice error from CRMProjects list");
       });
   };
 
@@ -135,6 +212,14 @@ const Projects = (props: IProps): JSX.Element => {
           : peoplePickerTemplate(projectManagers[0])}
       </div>
     );
+  };
+
+  //handle all filters:
+  const handleFilterChange = (field: string, value: string) => {
+    setFilterValues((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   //Delete Particular Item:
@@ -156,15 +241,46 @@ const Projects = (props: IProps): JSX.Element => {
       });
   };
 
+  //apply filters in purticular columns:
+  const applyFilters = () => {
+    const filtered = masterProjectDetails.filter((item) => {
+      const matchProjectID = item?.ProjectID?.toLowerCase().includes(
+        filterValues.ProjectID.toLowerCase()
+      );
+      const matchLead = item?.Lead?.toLowerCase().includes(
+        filterValues.Lead.toLowerCase()
+      );
+      const matchAccount = item?.AccountName?.toLowerCase().includes(
+        filterValues.AccountName.toLowerCase()
+      );
+      const matchStatus = filterValues.ProjectStatus
+        ? item?.ProjectStatus === filterValues.ProjectStatus
+        : true;
+      const matchBilling = filterValues.BillingModel
+        ? item?.BillingModel === filterValues.BillingModel
+        : true;
+
+      return (
+        matchProjectID &&
+        matchLead &&
+        matchAccount &&
+        matchStatus &&
+        matchBilling
+      );
+    });
+
+    setProjectDetails(filtered);
+  };
+
   //Global Search functionalities:
   const searchProjectDetails = (val: string) => {
     setSearchVal(val);
     if (!val) {
-      setProjectDetails([...masterProjectDetails]);
+      applyFilters();
       return;
     }
 
-    const filtered = masterProjectDetails.filter((item) => {
+    const filtered = projectDetails.filter((item) => {
       const managerNames =
         item?.ProjectManager?.map((pm) => pm.name?.toLowerCase()).join(" ") ||
         "";
@@ -183,12 +299,20 @@ const Projects = (props: IProps): JSX.Element => {
 
   //Initial Render:
   React.useEffect(() => {
+    setLoader(true);
     getProjectDetails();
   }, []);
 
+  //Filter changes render:
+  React.useEffect(() => {
+    applyFilters();
+  }, [filterValues]);
+
   return (
     <>
-      {currentPage === "list" && (
+      {loader ? (
+        <Loading />
+      ) : currentPage === "list" ? (
         <div className={styles.lcaBody}>
           <div
             className={`${styles.filterBarAndTableBorder} 
@@ -212,6 +336,18 @@ const Projects = (props: IProps): JSX.Element => {
               </div>
               <div className={styles.btnAndText}>
                 <div
+                  className={styles.btnBackGround}
+                  onClick={() => setFilterBar(!filterBar)}
+                >
+                  <img
+                    src={filterBar ? FilterNoneImage : FilterImage}
+                    alt="no image"
+                  />
+                  Filter
+                </div>
+              </div>
+              <div className={styles.btnAndText}>
+                <div
                   onClick={() => {
                     setSelectedData(null);
                     setFormMode("add");
@@ -229,6 +365,85 @@ const Projects = (props: IProps): JSX.Element => {
               </div>
             </div>
           </div>
+          {filterBar ? (
+            <div className={styles.filterFields}>
+              <div className={styles.filterField}>
+                <label>Project Id</label>
+                <InputText
+                  value={filterValues?.ProjectID}
+                  onChange={(e) =>
+                    handleFilterChange("ProjectID", e.target.value)
+                  }
+                  placeholder="Enter here"
+                />
+              </div>
+              <div className={styles.filterField}>
+                <label>Lead</label>
+                <InputText
+                  value={filterValues?.Lead}
+                  onChange={(e) => handleFilterChange("Lead", e.target.value)}
+                  placeholder="Enter here"
+                />
+              </div>
+              <div className={styles.filterField}>
+                <label>Account name</label>
+                <InputText
+                  value={filterValues?.AccountName}
+                  onChange={(e) =>
+                    handleFilterChange("AccountName", e.target.value)
+                  }
+                  placeholder="Enter here"
+                />
+              </div>
+              <div className={`${styles.filterField} dropdown`}>
+                <label>Project status</label>
+                <Dropdown
+                  options={initialCRMProjectsListDropContainer?.projectStaus}
+                  optionLabel="name"
+                  placeholder="Select a status"
+                  value={initialCRMProjectsListDropContainer?.projectStaus.find(
+                    (item) => item.name === filterValues?.ProjectStatus
+                  )}
+                  onChange={(e) =>
+                    handleFilterChange("ProjectStatus", e.value?.name)
+                  }
+                />
+              </div>
+              <div className={`${styles.filterField} dropdown`}>
+                <label>Billing model</label>
+                <Dropdown
+                  options={initialCRMProjectsListDropContainer?.BillingModel}
+                  optionLabel="name"
+                  placeholder="Select a billing model"
+                  value={initialCRMProjectsListDropContainer?.BillingModel.find(
+                    (item) => item.name === filterValues?.BillingModel
+                  )}
+                  onChange={(e) =>
+                    handleFilterChange("BillingModel", e.value?.name)
+                  }
+                />
+              </div>
+              <div className={styles.filterField} style={{ width: "3%" }}>
+                <PrimaryButton
+                  styles={RefreshButton}
+                  iconProps={{ iconName: "refresh" }}
+                  className={styles.refresh}
+                  onClick={() => {
+                    setSearchVal("");
+                    setFilterValues({
+                      ProjectID: "",
+                      Lead: "",
+                      AccountName: "",
+                      ProjectStatus: "",
+                      BillingModel: "",
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            ""
+          )}
           <div
             className={`${styles.tableData} tableData
               ${ScreenWidth >= 1536 ? "data_table_1536" : "data_table_1396"}`}
@@ -256,11 +471,27 @@ const Projects = (props: IProps): JSX.Element => {
                 field="ProjectName"
                 header="Project name"
               ></Column>
-              <Column sortable field="StartDate" header="Start date"></Column>
+              <Column
+                sortable
+                field="StartDate"
+                header="Start date"
+                body={(rowData) => {
+                  return (
+                    <div>{moment(rowData?.StartDate).format("DD/MM/YYYY")}</div>
+                  );
+                }}
+              ></Column>
               <Column
                 sortable
                 field="PlannedEndDate"
                 header="End date"
+                body={(rowData) => {
+                  return (
+                    <div>
+                      {moment(rowData?.PlannedEndDate).format("DD/MM/YYYY")}
+                    </div>
+                  );
+                }}
               ></Column>
               <Column
                 sortable
@@ -329,9 +560,15 @@ const Projects = (props: IProps): JSX.Element => {
             </DataTable>
           </div>
         </div>
+      ) : (
+        ""
       )}
+
       {currentPage === "form" && (
         <ProjectFormPage
+          initialCRMProjectsListDropContainer={
+            initialCRMProjectsListDropContainer
+          }
           data={selectedData}
           isAdd={formMode === "add"}
           isEdit={formMode === "edit"}

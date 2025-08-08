@@ -27,7 +27,6 @@ import { Dropdown } from "primereact/dropdown";
 import { InputTextarea } from "primereact/inputtextarea";
 
 const BillingsForm = (props: any) => {
-  console.log(props, "Billingsprops");
   //Local States:
   const [
     initialCRMBillingsListDropContainer,
@@ -35,9 +34,9 @@ const BillingsForm = (props: any) => {
   ] = useState<ICRMBillingsListDrop>({
     ...Config.CRMBillingsDropDown,
   });
-  console.log(
-    initialCRMBillingsListDropContainer,
-    "intialCRMBillingsListDropDownContainer"
+  const [formData, setFormData] = useState<any>({});
+  const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
+    {}
   );
 
   //Get All choices from Project List:
@@ -116,101 +115,490 @@ const BillingsForm = (props: any) => {
       });
   };
 
+  //handleOnChange function:
+  const handleOnChange = (field: string, value: any) => {
+    setFormData((prevData: any) => ({
+      ...prevData,
+      [field]: value,
+    }));
+    // Remove the error once user starts typing
+    setErrorMessage((prevErrors) => ({
+      ...prevErrors,
+      [field]: !isValidField(field, value),
+    }));
+  };
+
   //Data refresh and goBack mainPage function:
   const emptyDatas = () => {
     props?.refresh();
     props?.goBackBiilingsDashboard();
   };
 
+  //Validations:
+  const isValidField = (field: string, value: any): boolean => {
+    switch (field) {
+      case "BillingFrequency":
+      case "Currency":
+      case "MileStoneDescription":
+      case "MileStoneName":
+      case "Notes":
+      case "ResourceType":
+      case "Status":
+        return value && typeof value === "string" && value.trim() !== "";
+
+      case "ReminderDaysBeforeDue":
+      case "MonthlyAmount":
+      case "Rate":
+      case "Amount":
+        return (
+          value !== null &&
+          value !== undefined &&
+          value.toString().trim() !== ""
+        );
+
+      case "DueDate":
+      case "EndMonth":
+      case "StartMonth":
+        return value !== null && value !== undefined;
+
+      default:
+        return true;
+    }
+  };
+
+  const Validation = () => {
+    let errors: { [key: string]: boolean } = {};
+    const billingModel = props?.BillingModel;
+    // Common fields
+    if (!isValidField("Currency", formData?.Currency)) errors.Currency = true;
+    if (!isValidField("Notes", formData?.Notes)) errors.Notes = true;
+    if (!isValidField("DueDate", formData?.DueDate)) errors.DueDate = true;
+    if (!isValidField("Status", formData?.Status)) errors.Status = true;
+    if (!isValidField("ReminderDaysBeforeDue", formData?.ReminderDaysBeforeDue))
+      errors.ReminderDaysBeforeDue = true;
+
+    // Billing model specific fields
+    if (billingModel === "Milestone") {
+      if (!isValidField("MileStoneName", formData?.MileStoneName))
+        errors.MileStoneName = true;
+      if (!isValidField("MileStoneDescription", formData?.MileStoneDescription))
+        errors.MileStoneDescription = true;
+      if (!isValidField("Amount", formData?.Amount)) errors.Amount = true;
+    }
+
+    if (billingModel === "T&M") {
+      if (!isValidField("BillingFrequency", formData?.BillingFrequency))
+        errors.BillingFrequency = true;
+      if (!isValidField("Rate", formData?.Rate)) errors.Rate = true;
+      if (!isValidField("ResourceType", formData?.ResourceType))
+        errors.ResourceType = true;
+    }
+
+    if (billingModel === "FixedMonthly") {
+      if (!isValidField("StartMonth", formData?.StartMonth))
+        errors.StartMonth = true;
+      if (!isValidField("EndMonth", formData?.EndMonth)) errors.EndMonth = true;
+      if (!isValidField("MonthlyAmount", formData?.MonthlyAmount))
+        errors.MonthlyAmount = true;
+    }
+
+    setErrorMessage(errors);
+
+    if (Object.keys(errors).length === 0) {
+      generateJson();
+    }
+  };
+
+  //Json Generations:
+  const generateJson = () => {
+    let json = {
+      Amount: formData?.Amount ? formData?.Amount : 0,
+      BillingFrequency: formData?.BillingFrequency
+        ? formData?.BillingFrequency
+        : "",
+      Currency: formData?.Currency ? formData?.Currency : "",
+      DueDate: formData?.DueDate
+        ? SPServices.GetDateFormat(formData?.DueDate)
+        : null,
+      EndMonth: formData?.EndMonth
+        ? SPServices.GetDateFormat(formData?.EndMonth)
+        : null,
+      MileStoneDescription: formData?.MileStoneDescription
+        ? formData?.MileStoneDescription
+        : "",
+      MileStoneName: formData?.MileStoneName ? formData?.MileStoneName : "",
+      MonthlyAmount: formData?.MonthlyAmount ? formData?.MonthlyAmount : 0,
+      Notes: formData?.Notes ? formData?.Notes : "",
+      ProjectId: props?.selectedProjectsData?.ID,
+      Rate: formData?.Rate ? formData?.Rate : 0,
+      ReminderDaysBeforeDue: formData?.ReminderDaysBeforeDue
+        ? formData?.ReminderDaysBeforeDue
+        : "",
+      ResourceType: formData?.ResourceType ? formData?.ResourceType : "",
+      StartMonth: formData?.StartMonth
+        ? SPServices.GetDateFormat(formData?.StartMonth)
+        : null,
+      Status: formData?.Status ? formData?.Status : "",
+    };
+    if (props?.isEdit) {
+      handleUpdate(json);
+    } else {
+      handleAdd(json);
+    }
+  };
+
+  //Add datas to CRMBillings List:
+  const handleAdd = (json: any) => {
+    debugger;
+    SPServices.SPAddItem({
+      Listname: Config.ListNames.CRMBillings,
+      RequestJSON: json,
+    })
+      .then(() => {
+        props.Notify("success", "Success", "Details added successfully");
+        emptyDatas();
+      })
+      .catch((err) => {
+        console.log(
+          err,
+          "Add Datas to CRMBillings err in BillingsFormPage.tsx component"
+        );
+      });
+  };
+
+  //Update Datas to CRMProjects List:
+  const handleUpdate = (json: any) => {
+    SPServices.SPUpdateItem({
+      Listname: Config.ListNames.CRMBillings,
+      RequestJSON: json,
+      ID: formData?.ID,
+    })
+      .then(() => {
+        props.Notify("success", "Success", "Details updated successfully");
+        emptyDatas();
+      })
+      .catch((err) => {
+        console.log(
+          err,
+          "Update Datas to CRMBillings err in Billings FormPage.tsx component"
+        );
+      });
+  };
+
+  //RowData is once comming then data set to the state:
+  React.useEffect(() => {
+    setFormData(props?.selectedCRMBillingsRowData);
+  }, [props?.selectedCRMBillingsRowData]);
+
   //Initial Render:
   React.useEffect(() => {
     getAllChoiceFromCRMBillingsList();
+    if (!props?.selectedCRMBillingsRowData) {
+      setFormData({
+        Amount: null,
+        BillingFrequency: "",
+        Currency: "",
+        DueDate: null,
+        EndMonth: null,
+        MileStoneDescription: "",
+        MileStoneName: "",
+        MonthlyAmount: null,
+        Notes: "",
+        Rate: null,
+        ReminderDaysBeforeDue: 7,
+        ResourceType: "",
+        StartMonth: null,
+        Status: "",
+      });
+    }
   }, []);
   return (
     <div className={styles.viewFormMain}>
       <div className={styles.viewFormNavBar}>
         <h2>
           {props?.isAdd
-            ? "Add Bills"
+            ? "Add Milestone"
             : props?.isEdit
-            ? "Edit Bills"
-            : "View Bills"}
+            ? "Edit Milestone"
+            : "View Milestone"}
         </h2>
       </div>
       <div className={styles.formPage}>
         <div className={styles.firstPage}>
           <div className={`${styles.allField} dealFormPage`}>
-            <Label>Amount</Label>
-            <InputText placeholder="Enter amount" />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Billing frequency</Label>
-            <Dropdown
-              options={initialCRMBillingsListDropContainer?.BillingFrequency}
-              optionLabel="name"
-              placeholder="Select a BillingFrequency"
-            />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
             <Label>Currency</Label>
             <Dropdown
+              value={initialCRMBillingsListDropContainer?.Currency.find(
+                (item) => item.name === formData?.Currency
+              )}
+              onChange={(e) => handleOnChange("Currency", e?.value?.name)}
               options={initialCRMBillingsListDropContainer?.Currency}
               optionLabel="name"
               placeholder="Select a currency"
+              style={
+                errorMessage["Currency"]
+                  ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                  : undefined
+              }
+              disabled={props?.isView}
+            />
+          </div>
+          <div className={`${styles.allField} dealFormPage`}>
+            <Label>Notes</Label>
+            <InputText
+              value={formData?.Notes}
+              onChange={(e) => handleOnChange("Notes", e.target.value)}
+              placeholder="Enter notes"
+              style={
+                errorMessage["Notes"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+              disabled={props?.isView}
             />
           </div>
           <div className={`${styles.allField} dealFormPage`}>
             <Label>Due date</Label>
-            <DatePicker styles={DatePickerStyles} />
+            <DatePicker
+              value={
+                formData?.DueDate ? new Date(formData?.DueDate) : undefined
+              }
+              onSelectDate={(date) => handleOnChange("DueDate", date)}
+              styles={
+                errorMessage["DueDate"]
+                  ? {
+                      root: {
+                        border: "2px solid #ff0000",
+                        height: "35px",
+                        borderRadius: "4px",
+                      },
+                    }
+                  : DatePickerStyles
+              }
+              disabled={props?.isView}
+            />
           </div>
           <div className={`${styles.allField} dealFormPage`}>
-            <Label>End date</Label>
-            <DatePicker styles={DatePickerStyles} />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Milestone description</Label>
-            <InputTextarea />
-          </div>
-        </div>
-        <div className={styles.secondPage}>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Milestone Name</Label>
-            <InputText placeholder="Enter Milestone name" />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Monthly amount</Label>
-            <InputText placeholder="Enter Monthly amount" />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Notes</Label>
-            <InputText placeholder="Enter notes" />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Rate</Label>
-            <InputText placeholder="Enter Rate" />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Reminder days before due</Label>
-            <InputText placeholder="Enter Reminder days before due" />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label>Resource type</Label>
-            <InputText placeholder="Enter Resource type" />
-          </div>
-        </div>
-        <div className={styles.thirdPage}>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label> Start month</Label>
-            <DatePicker styles={DatePickerStyles} />
-          </div>
-          <div className={`${styles.allField} dealFormPage`}>
-            <Label> Status</Label>
+            <Label>Status</Label>
             <Dropdown
+              value={initialCRMBillingsListDropContainer?.Status.find(
+                (item) => item.name === formData?.Status
+              )}
+              onChange={(e) => handleOnChange("Status", e?.value?.name)}
               options={initialCRMBillingsListDropContainer?.Status}
               optionLabel="name"
               placeholder="Select a start month"
+              style={
+                errorMessage["Status"]
+                  ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                  : undefined
+              }
+              disabled={props?.isView}
             />
           </div>
+          <div className={`${styles.allField} dealFormPage`}>
+            <Label>Reminder days before due</Label>
+            <InputText
+              value={formData?.ReminderDaysBeforeDue}
+              onChange={(e) => {
+                const onlyNumbers = e.target.value.replace(/\D/g, "");
+                handleOnChange("ReminderDaysBeforeDue", onlyNumbers);
+              }}
+              placeholder="Enter Reminder days before due"
+              style={
+                errorMessage["ReminderDaysBeforeDue"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+              disabled={props?.isView}
+            />
+          </div>
+        </div>
+
+        <div className={styles.secondPage}>
+          {props?.BillingModel == "Milestone" && (
+            <>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>Milestone Name</Label>
+                <InputText
+                  value={formData?.MileStoneName}
+                  onChange={(e) =>
+                    handleOnChange("MileStoneName", e.target.value)
+                  }
+                  placeholder="Enter Milestone name"
+                  style={
+                    errorMessage["MileStoneName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>Milestone description</Label>
+                <InputTextarea
+                  maxLength={500}
+                  value={formData?.MileStoneDescription}
+                  onChange={(e) =>
+                    handleOnChange("MileStoneDescription", e.target.value)
+                  }
+                  style={
+                    errorMessage["MileStoneDescription"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>Amount</Label>
+                <InputText
+                  value={formData?.Amount}
+                  //   onChange={(e) => handleOnChange("Amount", e.target.value)}
+                  onChange={(e) => {
+                    const onlyNumbers = e.target.value.replace(/\D/g, "");
+                    handleOnChange("Amount", onlyNumbers);
+                  }}
+                  placeholder="Enter amount"
+                  style={
+                    errorMessage["Amount"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+            </>
+          )}
+          {props?.BillingModel == "T&M" && (
+            <>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>Billing frequency</Label>
+                <Dropdown
+                  value={initialCRMBillingsListDropContainer?.BillingFrequency.find(
+                    (item) => item.name === formData?.BillingFrequency
+                  )}
+                  onChange={(e) =>
+                    handleOnChange("BillingFrequency", e?.value?.name)
+                  }
+                  options={
+                    initialCRMBillingsListDropContainer?.BillingFrequency
+                  }
+                  optionLabel="name"
+                  placeholder="Select a BillingFrequency"
+                  style={
+                    errorMessage["BillingFrequency"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>Rate</Label>
+                <InputText
+                  value={formData?.Rate}
+                  onChange={(e) => {
+                    const onlyNumbers = e.target.value.replace(/\D/g, "");
+                    handleOnChange("Rate", onlyNumbers);
+                  }}
+                  placeholder="Enter Rate"
+                  style={
+                    errorMessage["Rate"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className={styles.thirdPage}>
+          {props?.BillingModel == "FixedMonthly" && (
+            <>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label> Start month</Label>
+                <DatePicker
+                  value={
+                    formData?.StartMonth
+                      ? new Date(formData?.StartMonth)
+                      : undefined
+                  }
+                  onSelectDate={(date) => handleOnChange("StartMonth", date)}
+                  styles={
+                    errorMessage["StartMonth"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>End month</Label>
+                <DatePicker
+                  value={
+                    formData?.EndMonth
+                      ? new Date(formData?.EndMonth)
+                      : undefined
+                  }
+                  onSelectDate={(date) => handleOnChange("EndMonth", date)}
+                  styles={
+                    errorMessage["EndMonth"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${styles.allField} dealFormPage`}>
+                <Label>Monthly amount</Label>
+                <InputText
+                  value={formData?.MonthlyAmount}
+                  onChange={(e) => {
+                    const onlyNumbers = e.target.value.replace(/\D/g, "");
+                    handleOnChange("MonthlyAmount", onlyNumbers);
+                  }}
+                  placeholder="Enter Monthly amount"
+                  style={
+                    errorMessage["MonthlyAmount"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+            </>
+          )}
+          {props?.BillingModel == "T&M" && (
+            <div className={`${styles.allField} dealFormPage`}>
+              <Label>Resource type</Label>
+              <InputText
+                value={formData?.ResourceType}
+                onChange={(e) => handleOnChange("ResourceType", e.target.value)}
+                placeholder="Enter Resource type"
+                style={
+                  errorMessage["ResourceType"]
+                    ? { border: "2px solid #ff0000" }
+                    : undefined
+                }
+                disabled={props?.isView}
+              />
+            </div>
+          )}
         </div>
       </div>
       <div className={styles.addUpdateBtns}>
@@ -225,6 +613,7 @@ const BillingsForm = (props: any) => {
           <PrimaryButton
             className={styles.updateBtn}
             iconProps={{ iconName: "Save" }}
+            onClick={() => Validation()}
           >
             {props?.isEdit ? "Update" : "Save"}
           </PrimaryButton>
