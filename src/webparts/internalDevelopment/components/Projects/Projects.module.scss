@@ -105,3 +105,56 @@ $ThemePrimeryColor: #00a99d;
   background-color: $ThemePrimeryColor !important;
   border: 1px solid $ThemePrimeryColor !important;
 }
+
+/*Filters designs............................................*/
+.filterFields {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0 25px 5px 25px;
+  padding: 5px 8px;
+  border-right: 1px solid #ebebeb;
+  border-left: 1px solid #ebebeb;
+  border-top: 1px solid #ebebeb;
+
+  .filterField {
+    width: 18%;
+    display: flex;
+    flex-wrap: wrap;
+
+    label {
+      margin-bottom: 5px;
+      color: $ThemePrimeryColor;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    input {
+      padding: 2px 5px 4px 5px;
+      font-size: 12px;
+      width: 100%;
+      border: 1px solid $ThemePrimeryColor;
+      border-color: $ThemePrimeryColor;
+      height: 32px;
+    }
+
+    button {
+      background: $ThemePrimeryColor;
+      border: 1px solid $ThemePrimeryColor;
+    }
+
+    .refresh {
+      background-color: #fff;
+      color: $ThemePrimeryColor;
+      border-radius: 6px;
+      min-width: 40px;
+      padding: 0;
+    }
+
+    .refresh:hover {
+      color: #fff;
+      background-color: $ThemePrimeryColor;
+    }
+  }
+}

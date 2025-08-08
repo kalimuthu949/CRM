@@ -12,7 +12,10 @@ import * as React from "react";
 import SPServices from "../../../../ExternalRef/CommonServices/SPServices";
 import { Config } from "../../../../ExternalRef/CommonServices/Config";
 import moment from "moment";
-import { IBillingsDetails } from "../../../../ExternalRef/CommonServices/interface";
+import {
+  IBillingsDetails,
+  IDelModal,
+} from "../../../../ExternalRef/CommonServices/interface";
 import styles from "../Projects/Projects.module.scss";
 import "../../../../ExternalRef/CSS/Style.css";
 import { IconField } from "primereact/iconfield";
@@ -21,6 +24,8 @@ import { InputText } from "primereact/inputtext";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import BillingsForm from "./BillingsForm";
+import { Modal, PrimaryButton } from "@fluentui/react";
+import Loading from "../../../../ExternalRef/Loader/Loading";
 
 const Billings = (props: any) => {
   //Local variables:
@@ -45,6 +50,12 @@ const Billings = (props: any) => {
   >("add");
   const [selectedCRMBillingsRowData, setSelectedCRMBillingsRowData] =
     React.useState<IBillingsDetails | null>(null);
+  const [isDelModal, setIsDelModal] = React.useState<IDelModal>({
+    isOpen: false,
+    Id: null,
+  });
+  const [searchTerm, setSearchTerm] = React.useState<string>("");
+  const [loader, setLoader] = React.useState<boolean>(false);
 
   //Get BillingsListDetails:
   const getBillingsListDetails = () => {
@@ -74,7 +85,7 @@ const Billings = (props: any) => {
             ID: items?.ID,
             MileStoneName: items?.MileStoneName,
             MileStoneDescription: items?.MileStoneDescription,
-            DueDate: moment(items?.DueDate).format("DD/MM/YYYY"),
+            DueDate: items?.DueDate,
             Amount: items?.Amount,
             Status: items?.Status,
             ReminderDaysBeforeDue: items?.ReminderDaysBeforeDue
@@ -83,8 +94,8 @@ const Billings = (props: any) => {
             Notes: items?.Notes,
             Currency: items?.Currency,
             MonthlyAmount: items?.MonthlyAmount,
-            StartMonth: moment(items?.StartMonth).format("MM/YYYY"),
-            EndMonth: moment(items?.EndMonth).format("MM/YYYY"),
+            StartMonth: items?.StartMonth,
+            EndMonth: items?.EndMonth,
             BillingFrequency: items?.BillingFrequency,
             ResourceType: items?.ResourceType,
             Rate: items?.Rate,
@@ -93,6 +104,7 @@ const Billings = (props: any) => {
         });
         setMasterBillingDetails([...BillingDetails]);
         setBillingDetails([...BillingDetails]);
+        setLoader(false);
       })
       .catch((err) => {
         console.log(
@@ -102,14 +114,56 @@ const Billings = (props: any) => {
       });
   };
 
+  //Delete Particular Item:
+  const TrashItem = () => {
+    const currObj = {
+      IsDelete: true,
+    };
+    SPServices.SPUpdateItem({
+      ID: isDelModal.Id ?? 0,
+      Listname: Config.ListNames.CRMBillings,
+      RequestJSON: currObj,
+    })
+      .then(() => {
+        props.Notify("success", "Success", "Bill Deleted successfully");
+        getBillingsListDetails();
+      })
+      .catch((err) => {
+        console.log(err, "rowData deleted err in Billings.tsx component");
+      });
+  };
+
+  //handle search Functionalities:
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    if (!value) {
+      setBillingDetails(masterBillingsDetails);
+    } else {
+      const lowerValue = value.toLowerCase();
+      const filtered = masterBillingsDetails.filter((item) =>
+        Object.values(item).some((field) =>
+          typeof field === "string"
+            ? field.toLowerCase().includes(lowerValue)
+            : typeof field === "number"
+            ? field.toString().includes(lowerValue)
+            : false
+        )
+      );
+      setBillingDetails(filtered);
+    }
+  };
+
   //Initial Render:
   React.useEffect(() => {
+    setLoader(true);
     getBillingsListDetails();
   }, []);
 
   return (
     <>
-      {page === "list" && (
+      {loader ? (
+        <Loading />
+      ) : page == "list" ? (
         <div className={styles.lcaBody}>
           <div
             className={`${styles.filterBarAndTableBorder} 
@@ -117,13 +171,18 @@ const Billings = (props: any) => {
           `}
           >
             <div className={styles.filterBar}>
-              <h2>Billings</h2>
+              <h2>Milestones ({props?.data?.BillingModel} based)</h2>
             </div>
             <div className={styles.filterBtns}>
               <div className="all_search">
                 <IconField iconPosition="left">
                   <InputIcon className="pi pi-search"> </InputIcon>
-                  <InputText v-model="value1" placeholder="Search" />
+                  <InputText
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Search"
+                    v-model="value1"
+                  />
                 </IconField>
               </div>
               <div className={styles.btnAndText}>
@@ -140,7 +199,7 @@ const Billings = (props: any) => {
                     alt="no image"
                     style={{ width: "15px", height: "15px" }}
                   />
-                  New Bill
+                  New Milestone
                 </div>
               </div>
               <div className={styles.btnAndText}>
@@ -180,7 +239,16 @@ const Billings = (props: any) => {
               }}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
-              <Column sortable field="DueDate" header="Due date"></Column>
+              <Column
+                sortable
+                field="DueDate"
+                header="Due date"
+                body={(rowData) => {
+                  return (
+                    <div>{moment(rowData?.DueDate).format("DD/MM/YYYY")}</div>
+                  );
+                }}
+              ></Column>
               <Column sortable field="Status" header="Status"></Column>
               <Column
                 sortable
@@ -235,10 +303,24 @@ const Billings = (props: any) => {
                   sortable
                   field="StartMonth"
                   header="Start month"
+                  body={(rowData) => {
+                    return (
+                      <div>{moment(rowData?.StartMonth).format("MM/YYYY")}</div>
+                    );
+                  }}
                 ></Column>
               )}
               {BillingModel == "FixedMonthly" && (
-                <Column sortable field="End Month" header="End month"></Column>
+                <Column
+                  sortable
+                  field="EndMonth"
+                  header="End month"
+                  body={(rowData) => {
+                    return (
+                      <div>{moment(rowData?.EndMonth).format("MM/YYYY")}</div>
+                    );
+                  }}
+                ></Column>
               )}
               <Column
                 field="Action"
@@ -258,8 +340,11 @@ const Billings = (props: any) => {
                       </div>
                       <div
                         onClick={(e) => {
-                          setSelectedCRMBillingsRowData(rowData);
                           e.stopPropagation();
+                          setIsDelModal({
+                            Id: rowData?.ID,
+                            isOpen: true,
+                          });
                         }}
                       >
                         <img
@@ -275,11 +360,15 @@ const Billings = (props: any) => {
             </DataTable>
           </div>
         </div>
+      ) : (
+        ""
       )}
+
       {page === "form" && (
         <BillingsForm
+          selectedProjectsData={props?.data}
           selectedCRMBillingsRowData={selectedCRMBillingsRowData}
-          BiilingModel={BillingModel}
+          BillingModel={BillingModel}
           isAdd={formBooleansMode === "add"}
           isEdit={formBooleansMode === "edit"}
           isView={formBooleansMode === "view"}
@@ -288,6 +377,31 @@ const Billings = (props: any) => {
           refresh={getBillingsListDetails}
         />
       )}
+      <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>
+        <p className={styles.delmsg}>
+          Are you sure, you want to delete this project bill?
+        </p>
+        <div className={styles.modalBtnSec}>
+          <PrimaryButton
+            text="No"
+            className={styles.cancelBtn}
+            onClick={() => {
+              setIsDelModal({ isOpen: false, Id: null });
+            }}
+          />
+          <PrimaryButton
+            text="Yes"
+            className={styles.addBtn}
+            onClick={() => {
+              setIsDelModal((pre) => ({
+                ...pre,
+                isOpen: false,
+              }));
+              TrashItem();
+            }}
+          />
+        </div>
+      </Modal>
     </>
   );
 };

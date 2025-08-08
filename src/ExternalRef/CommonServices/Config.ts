@@ -1,5 +1,6 @@
 /* eslint-disable prefer-const */
 import {
+  IButtonStyles,
   IDatePickerStyles,
   IPeoplePickerItemSelectedStyles,
 } from "@fluentui/react";
@@ -69,6 +70,16 @@ export namespace Config {
     ProjectId: 0,
   };
 }
+
+//Refresh button Common Styles:
+export const RefreshButton: Partial<IButtonStyles> = {
+  root: {
+    height: "33.25px",
+    i: {
+      fontWeight: "600 !important",
+    },
+  },
+};
 
 //DatePicker Styles:
 export const DatePickerStyles: Partial<IDatePickerStyles> = {

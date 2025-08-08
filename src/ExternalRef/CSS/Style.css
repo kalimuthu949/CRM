@@ -310,7 +310,19 @@ h4 {
 .drpDown .p-dropdown {
   border: 1px solid #00a99d !important;
 }
-
+.dropdown .p-dropdown {
+  /* padding: 2px 5px 4px 5px ; */
+  font-size: 12px;
+  width: 100%;
+  border: 1px solid #00a99d;
+  border-color: #00a99d;
+  height: 32px;
+}
+.dropdown .p-dropdown .p-dropdown-trigger {
+  background: #00a99d;
+  color: #ffffff;
+  border-radius: 0px;
+}
 .dropDownDisabled .p-dropdown {
   border: 1px solid #afafaf !important;
 }
@@ -322,6 +334,8 @@ h4 {
   width: 70%;
   border: 1px solid #00a99d;
   border-radius: 6px;
+  font-size: 12px;
+  color: #000;
 }
 .dealFormPage .p-dropdown {
   border-radius: 6px;
