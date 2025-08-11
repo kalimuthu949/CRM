@@ -379,7 +379,7 @@ const Billings = (props: any) => {
       )}
       <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>
         <p className={styles.delmsg}>
-          Are you sure, you want to delete this project bill?
+          Are you sure, you want to delete this milestone?
         </p>
         <div className={styles.modalBtnSec}>
           <PrimaryButton
