@@ -10,6 +10,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import styles from "../Deals/DealsFormPage.module.scss";
+import selfComponentStyles from "./Projects.module.scss";
 import { useState } from "react";
 import { DatePicker, PrimaryButton } from "@fluentui/react";
 import { InputText } from "primereact/inputtext";
@@ -30,10 +31,10 @@ import {
 import { IConfigState } from "../Redux/ConfigPageInterfaces";
 import { useSelector } from "react-redux";
 import { sp } from "@pnp/sp";
+import Billings from "../Billings/Billings";
 // import { PrincipalType } from "@pnp/sp";
 
 const ProjectFormPage = (props: any) => {
-  console.log(props?.data, "projectFormRowDatas");
   // Local Variables:
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
@@ -44,6 +45,13 @@ const ProjectFormPage = (props: any) => {
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [billingsData, setBillingsData] = useState<any[]>([]);
+  const [PMOusers, setPMOusers] = useState<IPeoplePickerDetails[]>([]);
+  const [DHusers, setDHusers] = useState<IPeoplePickerDetails[]>([]);
+  const [isApproval, setIsApproval] = useState<any>({
+    boolean: false,
+    id: null,
+  });
 
   //Data refresh and goBack mainPage function:
   const emptyDatas = () => {
@@ -60,6 +68,11 @@ const ProjectFormPage = (props: any) => {
     });
     props?.refresh();
     props?.goBack();
+  };
+
+  //Get Billings Data:
+  const getBillingsAddDetails = (details: any) => {
+    setBillingsData(details);
   };
 
   //GetLeads List Data Only FirstName And ID:
@@ -83,9 +96,53 @@ const ProjectFormPage = (props: any) => {
           name: item.FirstName,
         }));
         setLeadOptions(leads);
+        getPMOGroupUsers();
+        getDHGroupMembers();
       })
       .catch((err) => {
         console.error("Error fetching CRMLeads:", err);
+      });
+  };
+
+  //Get Group Members:
+  const getPMOGroupUsers = () => {
+    SPServices.getSPGroupMember({
+      GroupName: Config.GroupNames.PMO,
+    })
+      .then((res: any) => {
+        const tempUsers: IPeoplePickerDetails[] = [];
+        res.forEach((items: any) => {
+          tempUsers.push({
+            id: items?.Id,
+            email: items?.Email,
+            name: items?.Title,
+          });
+        });
+        setPMOusers([...tempUsers]);
+      })
+      .catch((err) => {
+        console.log(err, "Get PMO group users error in projectsFormPage.tsx");
+      });
+  };
+
+  //Get DH Group members:
+  const getDHGroupMembers = () => {
+    SPServices.getSPGroupMember({
+      GroupName: Config.GroupNames.DH,
+    })
+      .then((res) => {
+        const tempDHusers: IPeoplePickerDetails[] = [];
+        res.forEach((items: any) => {
+          tempDHusers.push({
+            id: items?.Id,
+            email: items?.Email,
+            name: items?.Title,
+          });
+        });
+        setDHusers([...tempDHusers]);
+      })
+      .catch((err) => {
+        console.log(err, "Get DH group users errro in projectsFormPage.tsx");
       });
   };
 
@@ -216,12 +273,41 @@ const ProjectFormPage = (props: any) => {
       .then(() => {
         props.Notify("success", "Success", "Details updated successfully");
         emptyDatas();
+        sessionStorage.removeItem("billingsData");
       })
       .catch((err) => {
         console.log(
           err,
           "Update Datas to CRMProjects err in ProjectsFormPage.tsx component"
         );
+      });
+  };
+
+  //handle approval process:
+  const handleApprovalFunc = () => {
+    const currObj = {
+      IsApproved: true,
+    };
+    const reSubmitObj = {
+      IsApproved: true,
+      ProjectStatus: "Initiated",
+    };
+    SPServices.SPUpdateItem({
+      ID: formData?.ProjectStatus == "Rejected" ? formData?.ID : isApproval?.id,
+      Listname: Config.ListNames.CRMProjects,
+      RequestJSON:
+        formData?.ProjectStatus == "Rejected" ? reSubmitObj : currObj,
+    })
+      .then(() => {
+        props.Notify("success", "Success", "Approval sent successfully");
+        setIsApproval({
+          boolean: false,
+          id: null,
+        });
+        emptyDatas();
+      })
+      .catch((err) => {
+        console.log(err, "Approval send err in projects.tsx component");
       });
   };
 
@@ -252,15 +338,100 @@ const ProjectFormPage = (props: any) => {
       Listname: Config.ListNames.CRMProjects,
       RequestJSON: json,
     })
-      .then(() => {
-        props.Notify("success", "Success", "Details added successfully");
-        emptyDatas();
+      .then((createItem: any) => {
+        const projectId = createItem?.data?.ID;
+        if (billingsData?.length > 0 && projectId && props?.isAdd) {
+          billingsData.forEach((bill: any) => {
+            const billingJson = {
+              ...bill,
+              ProjectId: projectId,
+            };
+            SPServices.SPAddItem({
+              Listname: Config.ListNames.CRMBillings,
+              RequestJSON: billingJson,
+            })
+              .then(() => {
+                setIsApproval({
+                  boolean: true,
+                  id: projectId,
+                });
+                sessionStorage.removeItem("billingsData");
+              })
+              .catch((err) => {
+                console.error("Error adding billing:", err);
+              });
+          });
+        }
+        props.Notify(
+          "success",
+          "Success",
+          props?.isAdd ||
+            (billingsData?.length > 0 &&
+              PMOusers?.some(
+                (user) =>
+                  user?.email?.toLowerCase() ===
+                  props?.loginUserEmail?.toLowerCase()
+              ))
+            ? "Details added successfully. Now click Send Approval button"
+            : "Details added successfully"
+        );
+        setIsApproval({
+          boolean: true,
+          id: projectId,
+        });
+        sessionStorage.removeItem("billingsData");
       })
       .catch((err) => {
         console.log(
           err,
           "Add Datas to CRMProjects err in ProjectsFormPage.tsx component"
         );
+      });
+  };
+
+  //Project manager status updated funtions :
+  const handleStatusUpdate = (status: string) => {
+    const approveObj = {
+      IsApproved: false,
+      ProjectStatus: status,
+      IsProjectManager: true,
+    };
+    const rejectObj = {
+      IsApproved: false,
+      ProjectStatus: status,
+    };
+    SPServices.SPUpdateItem({
+      Listname: Config.ListNames.CRMProjects,
+      ID: formData?.ID,
+      RequestJSON: status == "Pending" ? approveObj : rejectObj,
+    })
+      .then(() => {
+        props.Notify("success", "Success", `Project ${status} successfully`);
+        emptyDatas();
+      })
+      .catch((err) => {
+        console.error(`Error updating project to ${status}:`, err);
+      });
+  };
+
+  //DH status updated functions:
+  const handleDHUsersStatusUpdate = (status: string) => {
+    const CurrentObj = {
+      ProjectStatus: status,
+      IsProjectManager: false,
+    };
+
+    SPServices.SPUpdateItem({
+      Listname: Config.ListNames.CRMProjects,
+      ID: formData?.ID,
+      RequestJSON: CurrentObj,
+    })
+      .then(() => {
+        props.Notify("success", "Success", `Project ${status} successfully`);
+        emptyDatas();
+      })
+      .catch((err) => {
+        console.error(`Error updating project to ${status}:`, err);
       });
   };
 
@@ -283,7 +454,7 @@ const ProjectFormPage = (props: any) => {
   }, []);
 
   return (
-    <div className={styles.viewFormMain}>
+    <div style={{ overflow: "auto" }} className={styles.viewFormMain}>
       <div className={styles.viewFormNavBar}>
         <h2>
           {props?.isAdd
@@ -293,9 +464,9 @@ const ProjectFormPage = (props: any) => {
             : "View Projects"}
         </h2>
       </div>
-      <div className={styles.formPage}>
-        <div className={styles.firstPage}>
-          <div className={`${styles.allField} dealFormPage`}>
+      <div className={selfComponentStyles.formPage}>
+        <div className={selfComponentStyles.firstPage}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Project id</Label>
             <InputText
               onChange={(e) => handleOnChange("ProjectID", e.target.value)}
@@ -307,7 +478,7 @@ const ProjectFormPage = (props: any) => {
               disabled
             />
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Lead</Label>
             <Dropdown
               value={formData?.Lead}
@@ -322,7 +493,7 @@ const ProjectFormPage = (props: any) => {
               }
             />
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Account name</Label>
             <InputText
               onChange={(e) => handleOnChange("AccountName", e.target.value)}
@@ -335,7 +506,7 @@ const ProjectFormPage = (props: any) => {
               }
             />
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Project name</Label>
             <InputText
               onChange={(e) => handleOnChange("ProjectName", e.target.value)}
@@ -348,7 +519,7 @@ const ProjectFormPage = (props: any) => {
               }
             />
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Start date</Label>
             <DatePicker
               value={
@@ -370,8 +541,8 @@ const ProjectFormPage = (props: any) => {
             />
           </div>
         </div>
-        <div className={styles.secondPage}>
-          <div className={`${styles.allField} dealFormPage`}>
+        <div className={selfComponentStyles.secondPage}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Planned end date</Label>
             <DatePicker
               value={
@@ -394,9 +565,11 @@ const ProjectFormPage = (props: any) => {
               disabled={props?.isView}
             />
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Project manager</Label>
-            <div className={`${styles.textField} ${styles.peoplePicker}`}>
+            <div
+              className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
+            >
               <PeoplePicker
                 styles={
                   errorMessage["ProjectManager"]
@@ -421,7 +594,7 @@ const ProjectFormPage = (props: any) => {
               />
             </div>
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Project Status</Label>
             <Dropdown
               options={props?.initialCRMProjectsListDropContainer?.projectStaus}
@@ -430,7 +603,7 @@ const ProjectFormPage = (props: any) => {
                 (item) => item.name === formData?.ProjectStatus
               )}
               onChange={(e) => handleOnChange("ProjectStatus", e?.value?.name)}
-              disabled={props?.isView}
+              disabled
               style={
                 errorMessage["ProjectStatus"]
                   ? { border: "2px solid #ff0000", borderRadius: "4px" }
@@ -438,17 +611,16 @@ const ProjectFormPage = (props: any) => {
               }
             />
           </div>
-          <div className={`${styles.allField} dealFormPage`}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Billing model</Label>
             <Dropdown
               options={props?.initialCRMProjectsListDropContainer?.BillingModel}
               optionLabel="name"
-              // value={{ name: formData?.BillingModel }}3
               value={props?.initialCRMProjectsListDropContainer?.BillingModel.find(
                 (item) => item.name === formData?.BillingModel
               )}
               onChange={(e) => handleOnChange("BillingModel", e?.value?.name)}
-              disabled={props?.isView}
+              disabled={props?.isView || props?.isEdit}
               style={
                 errorMessage["BillingModel"]
                   ? { border: "2px solid #ff0000", borderRadius: "4px" }
@@ -458,15 +630,35 @@ const ProjectFormPage = (props: any) => {
           </div>
         </div>
       </div>
+      {formData.BillingModel && (
+        <Billings
+          getBillingsAddDetails={getBillingsAddDetails}
+          isAdd={props?.isAdd}
+          BillingModel={formData?.BillingModel}
+          data={props?.data}
+          goBack={props?.goBack}
+          spfxContext={props.spfxContext}
+          Notify={props.Notify}
+          setCurrentPage={props?.setCurrentPage}
+        />
+      )}
       <div className={styles.addUpdateBtns}>
-        <PrimaryButton
-          className={styles.cancelBtn}
-          iconProps={{ iconName: "cancel" }}
-          onClick={() => emptyDatas()}
-        >
-          Cancel
-        </PrimaryButton>
-        {props?.isView == false && (
+        {(props?.isAdd && isApproval?.boolean == false) || props?.isEdit ? (
+          <PrimaryButton
+            className={styles.cancelBtn}
+            iconProps={{ iconName: "cancel" }}
+            onClick={() => {
+              emptyDatas();
+              sessionStorage.removeItem("billingsData");
+            }}
+          >
+            Cancel
+          </PrimaryButton>
+        ) : (
+          ""
+        )}
+
+        {props?.isView == false && isApproval?.boolean == false && (
           <PrimaryButton
             className={styles.updateBtn}
             iconProps={{ iconName: "Save" }}
@@ -477,6 +669,91 @@ const ProjectFormPage = (props: any) => {
             {props?.isEdit ? "Update" : "Save"}
           </PrimaryButton>
         )}
+
+        {(PMOusers?.some(
+          (user) =>
+            user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+        ) &&
+          props?.isAdd) ||
+        (PMOusers?.some(
+          (user) =>
+            user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+        ) &&
+          formData?.ProjectStatus == "Rejected") ? (
+          <PrimaryButton
+            onClick={() => {
+              if (
+                (isApproval?.boolean && props?.isAdd) ||
+                (formData?.ProjectStatus == "Rejected" && props?.isEdit)
+              ) {
+                handleApprovalFunc();
+              } else {
+                props.Notify(
+                  "info",
+                  "Info",
+                  "Please save the data first, then click again to send approval"
+                );
+              }
+            }}
+            style={{ borderRadius: "5px" }}
+          >
+            {formData?.ProjectStatus == "Rejected"
+              ? "Resubmit"
+              : "Send approval"}
+          </PrimaryButton>
+        ) : (
+          ""
+        )}
+        {props?.isEdit &&
+          formData?.IsApproved &&
+          formData?.ProjectManager?.some(
+            (pm: IPeoplePickerDetails) =>
+              pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+          ) &&
+          formData?.ProjectStatus !== "Approved" &&
+          formData?.ProjectStatus !== "Rejected" && (
+            <>
+              <PrimaryButton
+                onClick={() => handleStatusUpdate("Pending")}
+                style={{ borderRadius: "5px" }}
+              >
+                Approve
+              </PrimaryButton>
+              <PrimaryButton
+                onClick={() => handleStatusUpdate("Rejected")}
+                className={styles.cancelBtn}
+              >
+                Reject
+              </PrimaryButton>
+            </>
+          )}
+        {/*...................This buttons only DH Approvers.............................*/}
+        {props?.isEdit &&
+          DHusers?.some(
+            (user) =>
+              user?.email?.toLowerCase() ===
+              props?.loginUserEmail?.toLowerCase()
+          ) &&
+          formData?.IsProjectManager &&
+          formData?.IsApproved == false &&
+          formData?.ProjectStatus == "Pending" && (
+            <>
+              <PrimaryButton
+                onClick={() => {
+                  handleDHUsersStatusUpdate("Approved");
+                }}
+                style={{ borderRadius: "5px" }}
+              >
+                Approve
+              </PrimaryButton>
+              <PrimaryButton
+                onClick={() => handleDHUsersStatusUpdate("Rejected")}
+                className={styles.cancelBtn}
+              >
+                Reject
+              </PrimaryButton>
+            </>
+          )}
       </div>
     </div>
   );

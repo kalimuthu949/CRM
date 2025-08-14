@@ -26,11 +26,12 @@ import { Column } from "primereact/column";
 import BillingsForm from "./BillingsForm";
 import { Modal, PrimaryButton } from "@fluentui/react";
 import Loading from "../../../../ExternalRef/Loader/Loading";
+import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
-  const BillingModel: string = props?.data?.BillingModel;
+  const BillingModel: string = props?.data?.BillingModel || props?.BillingModel;
   const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
   const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
   const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
@@ -43,8 +44,6 @@ const Billings = (props: any) => {
   const [masterBillingsDetails, setMasterBillingDetails] = React.useState<
     IBillingsDetails[]
   >([]);
-  console.log(masterBillingsDetails);
-  const [page, setPage] = React.useState<"list" | "form">("list");
   const [formBooleansMode, setFormBooleansMode] = React.useState<
     "add" | "edit" | "view"
   >("add");
@@ -56,6 +55,7 @@ const Billings = (props: any) => {
   });
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [loader, setLoader] = React.useState<boolean>(false);
+  const [isFormModalOpen, setIsFormModalOpen] = React.useState(false);
 
   //Get BillingsListDetails:
   const getBillingsListDetails = () => {
@@ -114,23 +114,57 @@ const Billings = (props: any) => {
       });
   };
 
+  //Get BillingsForm Details:
+  const getBillingFormDetails = (details: any) => {
+    setBillingDetails([...details]);
+    setMasterBillingDetails([...details]);
+  };
+
   //Delete Particular Item:
   const TrashItem = () => {
-    const currObj = {
-      IsDelete: true,
-    };
-    SPServices.SPUpdateItem({
-      ID: isDelModal.Id ?? 0,
-      Listname: Config.ListNames.CRMBillings,
-      RequestJSON: currObj,
-    })
-      .then(() => {
-        props.Notify("success", "Success", "Bill Deleted successfully");
-        getBillingsListDetails();
-      })
-      .catch((err) => {
-        console.log(err, "rowData deleted err in Billings.tsx component");
+    debugger;
+    if (props?.isAdd) {
+      setBillingDetails((prev) => {
+        const sessionData = sessionStorage.getItem("billingsData");
+        if (sessionData) {
+          const updated = prev.filter((item) => item?.ID !== isDelModal?.Id);
+          sessionStorage.setItem("billingsData", JSON.stringify(updated));
+          return updated;
+        }
+        return prev;
       });
+
+      setMasterBillingDetails((prev) =>
+        prev.filter((item) => item?.ID !== isDelModal?.Id)
+      );
+    } else {
+      const currObj = {
+        IsDelete: true,
+      };
+
+      SPServices.SPUpdateItem({
+        ID: isDelModal.Id ?? 0,
+        Listname: Config.ListNames.CRMBillings,
+        RequestJSON: currObj,
+      })
+        .then(() => {
+          props.Notify("success", "Success", "Bill Deleted successfully");
+          getBillingsListDetails();
+        })
+        .catch((err) => {
+          console.log(err, "rowData deleted err in Billings.tsx component");
+        });
+    }
+  };
+
+  //Open BillingsForm popup:
+  const openForm = (
+    mode: "add" | "edit" | "view",
+    data: IBillingsDetails | null = null
+  ) => {
+    setFormBooleansMode(mode);
+    setSelectedCRMBillingsRowData(data);
+    setIsFormModalOpen(true);
   };
 
   //handle search Functionalities:
@@ -163,7 +197,7 @@ const Billings = (props: any) => {
     <>
       {loader ? (
         <Loading />
-      ) : page == "list" ? (
+      ) : (
         <div className={styles.lcaBody}>
           <div
             className={`${styles.filterBarAndTableBorder} 
@@ -187,11 +221,7 @@ const Billings = (props: any) => {
               </div>
               <div className={styles.btnAndText}>
                 <div
-                  onClick={() => {
-                    setSelectedCRMBillingsRowData(null);
-                    setFormBooleansMode("add");
-                    setPage("form");
-                  }}
+                  onClick={() => openForm("add")}
                   className={styles.btnBackGround}
                 >
                   <img
@@ -233,9 +263,7 @@ const Billings = (props: any) => {
               paginator={billingsDetails && billingsDetails?.length > 8}
               rows={8}
               onRowClick={(e: any) => {
-                setSelectedCRMBillingsRowData(e?.data);
-                setFormBooleansMode("view");
-                setPage("form");
+                openForm("view", e?.data);
               }}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
@@ -330,10 +358,8 @@ const Billings = (props: any) => {
                     <div className={styles.Actions}>
                       <div
                         onClick={(e) => {
-                          setSelectedCRMBillingsRowData(rowData);
                           e.stopPropagation();
-                          setFormBooleansMode("edit");
-                          setPage("form");
+                          openForm("edit", rowData);
                         }}
                       >
                         <img title="Edit" src={EditImage} alt="no image"></img>
@@ -360,23 +386,34 @@ const Billings = (props: any) => {
             </DataTable>
           </div>
         </div>
-      ) : (
-        ""
       )}
-
-      {page === "form" && (
+      <Dialog
+        visible={isFormModalOpen}
+        style={{ width: "80vw" }}
+        modal
+        draggable={false}
+        resizable={false}
+        onHide={() => setIsFormModalOpen(false)}
+      >
         <BillingsForm
+          getBillingsAddDetails={props?.getBillingsAddDetails}
+          projectsFormAdd={props?.isAdd}
+          getBillingFormDetails={getBillingFormDetails}
           selectedProjectsData={props?.data}
           selectedCRMBillingsRowData={selectedCRMBillingsRowData}
           BillingModel={BillingModel}
           isAdd={formBooleansMode === "add"}
           isEdit={formBooleansMode === "edit"}
           isView={formBooleansMode === "view"}
-          goBackBiilingsDashboard={() => setPage("list")}
+          goBackBiilingsDashboard={() => setIsFormModalOpen(false)}
           Notify={props.Notify}
-          refresh={getBillingsListDetails}
+          refresh={() => {
+            getBillingsListDetails();
+            setIsFormModalOpen(false);
+          }}
         />
-      )}
+      </Dialog>
+
       <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>
         <p className={styles.delmsg}>
           Are you sure, you want to delete this milestone?

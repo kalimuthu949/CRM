@@ -10,3 +10,7 @@ interface IList {
   CRMProjects: string;
   CRMBillings: string;
 }
+interface IGroup {
+  PMO: string;
+  DH: string;
+}

@@ -443,7 +443,6 @@ const getDocLibFiles = async (params: IGetDocLibFiles): Promise<object[]> => {
 };
 
 const GetDateFormat = (date: Date | null): string | null => {
-  debugger;
   if (!date || isNaN(new Date(date).getTime())) {
     return null;
   }

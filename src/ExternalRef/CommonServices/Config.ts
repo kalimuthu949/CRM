@@ -24,6 +24,10 @@ export namespace Config {
     PMOpportunity: "PMOpportunity",
     CRMBillings: "CRMBillings",
   };
+  export const GroupNames: IGroup = {
+    PMO: "PMO",
+    DH: "DH",
+  };
   export const CRMOwners: string = "Admins";
   export const CRMManagersGroup: string = "Managers";
   export const PagenationShow: number = 8;

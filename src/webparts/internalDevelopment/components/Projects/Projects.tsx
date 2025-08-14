@@ -46,6 +46,7 @@ interface IProps {
   ) => void;
   spfxContext: any;
   pageName: string;
+  loginUserEmail: string;
   PageNavigation: (pageName: string, data?: IProjectData) => void;
 }
 //Global Image Variables:
@@ -53,6 +54,7 @@ const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
 const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
 const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
 const BillingImage: string = require("../../../../ExternalRef/Images/bill.png");
+console.log(BillingImage);
 const FilterImage: string = require("../../../../ExternalRef/Images/filter.png");
 const FilterNoneImage: string = require("../../../../ExternalRef/Images/filternone.png");
 
@@ -89,7 +91,6 @@ const Projects = (props: IProps): JSX.Element => {
     ProjectStatus: "",
     BillingModel: "",
   });
-  console.log(filterValues, "filterValues");
   const [
     initialCRMProjectsListDropContainer,
     setinitialCRMProjectsListDropContainer,
@@ -140,6 +141,8 @@ const Projects = (props: IProps): JSX.Element => {
             ProjectManager: _ProjectManager ? _ProjectManager : [],
             ProjectStatus: items?.ProjectStatus,
             BillingModel: items?.BillingModel,
+            IsApproved: items?.IsApproved,
+            IsProjectManager: items?.IsProjectManager,
           });
         });
         setProjectDetails([...projectDetails]);
@@ -352,6 +355,7 @@ const Projects = (props: IProps): JSX.Element => {
                     setSelectedData(null);
                     setFormMode("add");
                     setCurrentPage("form");
+                    sessionStorage.removeItem("billingsData");
                   }}
                   className={styles.btnBackGround}
                 >
@@ -540,7 +544,7 @@ const Projects = (props: IProps): JSX.Element => {
                           alt="no image"
                         ></img>
                       </div>
-                      <div
+                      {/* <div
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedData(rowData);
@@ -552,7 +556,7 @@ const Projects = (props: IProps): JSX.Element => {
                           src={BillingImage}
                           alt="no image"
                         ></img>
-                      </div>
+                      </div> */}
                     </div>
                   );
                 }}
@@ -566,6 +570,7 @@ const Projects = (props: IProps): JSX.Element => {
 
       {currentPage === "form" && (
         <ProjectFormPage
+          loginUserEmail={props?.loginUserEmail}
           initialCRMProjectsListDropContainer={
             initialCRMProjectsListDropContainer
           }
@@ -577,6 +582,7 @@ const Projects = (props: IProps): JSX.Element => {
           spfxContext={props.spfxContext}
           Notify={props.Notify}
           refresh={getProjectDetails}
+          setCurrentPage={setCurrentPage}
         />
       )}
       {currentPage === "BillingList" && (
