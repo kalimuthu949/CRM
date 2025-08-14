@@ -47,6 +47,7 @@ interface IProps {
 const CompanyLogo: string = require("../../../ExternalRef/Images/technorucslogoBLACK.png");
 
 const App = (props: IProps): JSX.Element => {
+  const loginUserEmail: string = props?.spfxContext?._pageContext?._user?.email;
   // Varaibles
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
@@ -108,6 +109,13 @@ const App = (props: IProps): JSX.Element => {
 
   useEffect(() => {
     init();
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem("billingsData");
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, []);
 
   return (
@@ -279,6 +287,7 @@ const App = (props: IProps): JSX.Element => {
                   />
                 ) : pageName == "Projects" ? (
                   <Projects
+                    loginUserEmail={loginUserEmail}
                     spfxContext={props.spfxContext}
                     pageName={pageName}
                     PageNavigation={PageNavigation}

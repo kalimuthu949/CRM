@@ -18,6 +18,8 @@ export interface IProjectData {
   ProjectManager: IPeoplePickerDetails[];
   ProjectStatus: string;
   BillingModel: string;
+  IsApproved: boolean;
+  IsProjectManager: boolean;
 }
 
 export interface IBasicDropDown {
