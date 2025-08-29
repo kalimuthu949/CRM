@@ -143,6 +143,11 @@ const Projects = (props: IProps): JSX.Element => {
             BillingModel: items?.BillingModel,
             IsApproved: items?.IsApproved,
             IsProjectManager: items?.IsProjectManager,
+            BillingContactName: items?.BillingContactName,
+            BillingContactEmail: items?.BillingContactEmail,
+            BillingContactMobile: items?.BillingContactMobile,
+            BillingAddress: items?.BillingAddress,
+            Remarks: items?.Remarks,
           });
         });
         setProjectDetails([...projectDetails]);

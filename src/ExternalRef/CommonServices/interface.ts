@@ -20,6 +20,11 @@ export interface IProjectData {
   BillingModel: string;
   IsApproved: boolean;
   IsProjectManager: boolean;
+  BillingContactName: string;
+  BillingContactEmail: string;
+  BillingContactMobile: string;
+  BillingAddress: string;
+  Remarks: string;
 }
 
 export interface IBasicDropDown {
