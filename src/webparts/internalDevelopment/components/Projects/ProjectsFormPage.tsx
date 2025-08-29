@@ -32,6 +32,7 @@ import { IConfigState } from "../Redux/ConfigPageInterfaces";
 import { useSelector } from "react-redux";
 import { sp } from "@pnp/sp";
 import Billings from "../Billings/Billings";
+import { InputTextarea } from "primereact/inputtextarea";
 // import { PrincipalType } from "@pnp/sp";
 
 const ProjectFormPage = (props: any) => {
@@ -65,6 +66,11 @@ const ProjectFormPage = (props: any) => {
       ProjectManager: [],
       ProjectStatus: "",
       BillingModel: "",
+      BillingContactName: "",
+      BillingContactEmail: "",
+      BillingContactMobile: "",
+      BillingAddress: "",
+      Remarks: "",
     });
     props?.refresh();
     props?.goBack();
@@ -201,6 +207,11 @@ const ProjectFormPage = (props: any) => {
       case "BillingModel":
       case "AccountName":
       case "ProjectName":
+      case "BillingContactName":
+      case "BillingContactEmail":
+      case "BillingContactMobile":
+      case "BillingAddress":
+      case "Remarks":
         return value && typeof value === "string" && value.trim() !== "";
 
       case "StartDate":
@@ -229,6 +240,15 @@ const ProjectFormPage = (props: any) => {
       errors.ProjectStatus = true;
     if (!isValidField("BillingModel", formData?.BillingModel))
       errors.BillingModel = true;
+    if (!isValidField("BillingContactName", formData?.BillingContactName))
+      errors.BillingContactName = true;
+    if (!isValidField("BillingContactEmail", formData?.BillingContactEmail))
+      errors.BillingContactEmail = true;
+    if (!isValidField("BillingContactMobile", formData?.BillingContactMobile))
+      errors.BillingContactMobile = true;
+    if (!isValidField("BillingAddress", formData?.BillingAddress))
+      errors.BillingAddress = true;
+    if (!isValidField("Remarks", formData?.Remarks)) errors.Remarks = true;
 
     setErrorMessage(errors);
 
@@ -255,6 +275,11 @@ const ProjectFormPage = (props: any) => {
       ProjectManagerId: { results: ProjectManagerIds },
       ProjectStatus: formData?.ProjectStatus,
       BillingModel: formData?.BillingModel,
+      BillingContactName: formData?.BillingContactName,
+      BillingContactEmail: formData?.BillingContactEmail,
+      BillingContactMobile: formData?.BillingContactMobile,
+      BillingAddress: formData?.BillingAddress,
+      Remarks: formData?.Remarks,
     };
     if (props?.isEdit) {
       handleUpdate(json);
@@ -365,21 +390,28 @@ const ProjectFormPage = (props: any) => {
         props.Notify(
           "success",
           "Success",
-          props?.isAdd ||
-            (billingsData?.length > 0 &&
-              PMOusers?.some(
-                (user) =>
-                  user?.email?.toLowerCase() ===
-                  props?.loginUserEmail?.toLowerCase()
-              ))
+          billingsData?.length > 0 &&
+            PMOusers?.some(
+              (user) =>
+                user?.email?.toLowerCase() ===
+                props?.loginUserEmail?.toLowerCase()
+            )
             ? "Details added successfully. Now click Send Approval button"
-            : "Details added successfully"
+            : props?.isAdd
+            ? "Details added successfully"
+            : ""
         );
         setIsApproval({
           boolean: true,
           id: projectId,
         });
         sessionStorage.removeItem("billingsData");
+        PMOusers?.some(
+          (user) =>
+            user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+        )
+          ? ""
+          : emptyDatas();
       })
       .catch((err) => {
         console.log(
@@ -449,6 +481,11 @@ const ProjectFormPage = (props: any) => {
         ProjectManager: [],
         ProjectStatus: "Initiated",
         BillingModel: "",
+        BillingContactName: "",
+        BillingContactEmail: "",
+        BillingContactMobile: "",
+        BillingAddress: "",
+        Remarks: "",
       });
     }
   }, []);
@@ -543,6 +580,21 @@ const ProjectFormPage = (props: any) => {
         </div>
         <div className={selfComponentStyles.secondPage}>
           <div className={`${selfComponentStyles.allField} dealFormPage`}>
+            <Label>BillingContactName</Label>
+            <InputText
+              onChange={(e) =>
+                handleOnChange("BillingContactName", e.target.value)
+              }
+              value={formData?.BillingContactName}
+              disabled={props?.isView}
+              style={
+                errorMessage["BillingContactName"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+            />
+          </div>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
             <Label>Planned end date</Label>
             <DatePicker
               value={
@@ -629,6 +681,66 @@ const ProjectFormPage = (props: any) => {
             />
           </div>
         </div>
+        <div className={selfComponentStyles.thirdPage}>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
+            <Label>BillingContactEmail</Label>
+            <InputText
+              onChange={(e) =>
+                handleOnChange("BillingContactEmail", e.target.value)
+              }
+              value={formData?.BillingContactEmail}
+              disabled={props?.isView}
+              style={
+                errorMessage["BillingContactEmail"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+            />
+          </div>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
+            <Label>BillingContactMobile</Label>
+            <InputText
+              onChange={(e) =>
+                handleOnChange("BillingContactMobile", e.target.value)
+              }
+              value={formData?.BillingContactMobile}
+              disabled={props?.isView}
+              style={
+                errorMessage["BillingContactMobile"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+            />
+          </div>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
+            <Label>BillingAddress</Label>
+            <InputTextarea
+              onChange={(e) => handleOnChange("BillingAddress", e.target.value)}
+              value={formData?.BillingAddress}
+              disabled={props?.isView}
+              maxLength={500}
+              style={
+                errorMessage["BillingAddress"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+            />
+          </div>
+          <div className={`${selfComponentStyles.allField} dealFormPage`}>
+            <Label>Remarks</Label>
+            <InputTextarea
+              onChange={(e) => handleOnChange("Remarks", e.target.value)}
+              value={formData?.Remarks}
+              disabled={props?.isView}
+              maxLength={500}
+              style={
+                errorMessage["Remarks"]
+                  ? { border: "2px solid #ff0000" }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
       </div>
       {formData.BillingModel && (
         <Billings
@@ -643,7 +755,9 @@ const ProjectFormPage = (props: any) => {
         />
       )}
       <div className={styles.addUpdateBtns}>
-        {(props?.isAdd && isApproval?.boolean == false) || props?.isEdit ? (
+        {(props?.isAdd && isApproval?.boolean == false) ||
+        props?.isEdit ||
+        props?.isView ? (
           <PrimaryButton
             className={styles.cancelBtn}
             iconProps={{ iconName: "cancel" }}
