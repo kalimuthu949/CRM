@@ -11,6 +11,7 @@
 import * as React from "react";
 import styles from "../Deals/DealsFormPage.module.scss";
 import selfComponentStyles from "./Projects.module.scss";
+import "../../../../ExternalRef/CSS/Style.css";
 import { useState } from "react";
 import { DatePicker, PrimaryButton } from "@fluentui/react";
 import { InputText } from "primereact/inputtext";
@@ -33,7 +34,8 @@ import { useSelector } from "react-redux";
 import { sp } from "@pnp/sp";
 import Billings from "../Billings/Billings";
 import { InputTextarea } from "primereact/inputtextarea";
-// import { PrincipalType } from "@pnp/sp";
+import { FileUpload } from "primereact/fileupload";
+import Loading from "../../../../ExternalRef/Loader/Loading";
 
 const ProjectFormPage = (props: any) => {
   // Local Variables:
@@ -46,6 +48,9 @@ const ProjectFormPage = (props: any) => {
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [files, setFiles] = useState<File[]>([]);
+  const [deletedFiles, setDeletedFiles] = useState<any[]>([]);
+  const [loader, setLoader] = useState<boolean>(false);
   const [billingsData, setBillingsData] = useState<any[]>([]);
   const [PMOusers, setPMOusers] = useState<IPeoplePickerDetails[]>([]);
   const [DHusers, setDHusers] = useState<IPeoplePickerDetails[]>([]);
@@ -191,8 +196,43 @@ const ProjectFormPage = (props: any) => {
         }
         return newForm;
       });
+      LoadExistingFiles(props?.data?.ID);
     }
   }, [props?.data, leadOptions]);
+
+  //LoadExistingFiles in Library:
+  const LoadExistingFiles = async (id: number) => {
+    const projectId = `${id}`;
+    sp.web.lists
+      .getByTitle(Config.LibraryNames?.ProjectFiles)
+      .items.select(
+        "*,FileLeafRef,FileRef,FileDirRef,Author/Id,Author/Title,Author/EMail"
+      )
+      .filter(`project eq '${projectId}' and IsDelete eq false`)
+      .expand("File,Author")
+      .orderBy("Modified", false)
+      .get()
+      .then((res: any) => {
+        let tempData: any = [];
+        if (res?.length) {
+          res?.forEach((val: any) => {
+            tempData.push({
+              name: val?.File?.Name || "",
+              ulr: val?.File?.ServerRelativeUrl || "",
+              createdDate: val?.Created ? new Date(val?.Created) : null,
+              authorEmail: val?.Author?.EMail || "",
+            });
+          });
+        }
+        setFiles([...tempData]);
+      })
+      .catch((err: any) => {
+        console.log(
+          err,
+          "Get existing files data error in ProjectsFormPage.tsx component"
+        );
+      });
+  };
 
   //Validations:
   const isValidField = (field: string, value: any): boolean => {
@@ -259,6 +299,7 @@ const ProjectFormPage = (props: any) => {
 
   //Json Generations:
   const generateJson = () => {
+    setLoader(true);
     let ProjectManagerIds: number[] = JSON.parse(
       JSON.stringify(formData?.ProjectManager)
     )
@@ -289,23 +330,57 @@ const ProjectFormPage = (props: any) => {
   };
 
   //Update Datas to CRMProjects List:
-  const handleUpdate = (json: any) => {
-    SPServices.SPUpdateItem({
-      Listname: Config.ListNames.CRMProjects,
-      RequestJSON: json,
-      ID: formData?.ID,
-    })
-      .then(() => {
-        props.Notify("success", "Success", "Details updated successfully");
-        emptyDatas();
-        sessionStorage.removeItem("billingsData");
-      })
-      .catch((err) => {
-        console.log(
-          err,
-          "Update Datas to CRMProjects err in ProjectsFormPage.tsx component"
-        );
+  const handleUpdate = async (json: any) => {
+    try {
+      // 1. Update CRMProjects main item
+      await SPServices.SPUpdateItem({
+        Listname: Config.ListNames.CRMProjects,
+        RequestJSON: json,
+        ID: formData?.ID,
       });
+
+      // 2. Commit deletes in ProjectFiles library
+      if (deletedFiles.length > 0) {
+        for (const file of deletedFiles) {
+          const items = await sp.web.lists
+            .getByTitle(Config.LibraryNames?.ProjectFiles)
+            .items.filter(`FileLeafRef eq '${file.name}'`)
+            .select("Id", "FileLeafRef")
+            .get();
+
+          if (items.length > 0) {
+            const itemId = items[0].Id;
+            await sp.web.lists
+              .getByTitle(Config.LibraryNames?.ProjectFiles)
+              .items.getById(itemId)
+              .update({
+                IsDelete: true,
+              });
+          }
+        }
+        setDeletedFiles([]);
+      }
+
+      // 3. Add new files to library
+      if (files?.length > 0) {
+        // filter new files only
+        const newFiles = files.filter((f: any) => f.objectURL);
+
+        if (newFiles.length > 0) {
+          await addAttachmentsInLibrary(formData?.ID, newFiles);
+        }
+      }
+
+      props.Notify("success", "Success", "Details updated successfully");
+      setLoader(false);
+      emptyDatas();
+      sessionStorage.removeItem("billingsData");
+    } catch (err) {
+      console.log(
+        err,
+        "Update Datas to CRMProjects err in ProjectsFormPage.tsx component"
+      );
+    }
   };
 
   //handle approval process:
@@ -358,67 +433,106 @@ const ProjectFormPage = (props: any) => {
   };
 
   //Add datas to CRMProjects List:
-  const handleAdd = (json: any) => {
-    SPServices.SPAddItem({
-      Listname: Config.ListNames.CRMProjects,
-      RequestJSON: json,
-    })
-      .then((createItem: any) => {
-        const projectId = createItem?.data?.ID;
-        if (billingsData?.length > 0 && projectId && props?.isAdd) {
-          billingsData.forEach((bill: any) => {
-            const billingJson = {
-              ...bill,
-              ProjectId: projectId,
-            };
-            SPServices.SPAddItem({
+  const handleAdd = async (json: any) => {
+    try {
+      const createItem: any = await SPServices.SPAddItem({
+        Listname: Config.ListNames.CRMProjects,
+        RequestJSON: json,
+      });
+
+      const projectId = createItem?.data?.ID;
+
+      // 1. If files available → wait until uploaded
+      if (files?.length > 0) {
+        await addAttachmentsInLibrary(projectId, files);
+      }
+
+      // 2. Billings add logic
+      if (billingsData?.length > 0 && projectId && props?.isAdd) {
+        for (const bill of billingsData) {
+          const billingJson = {
+            ...bill,
+            ProjectId: projectId,
+          };
+          try {
+            await SPServices.SPAddItem({
               Listname: Config.ListNames.CRMBillings,
               RequestJSON: billingJson,
-            })
-              .then(() => {
-                setIsApproval({
-                  boolean: true,
-                  id: projectId,
-                });
-                sessionStorage.removeItem("billingsData");
-              })
-              .catch((err) => {
-                console.error("Error adding billing:", err);
-              });
-          });
+            });
+            setIsApproval({
+              boolean: true,
+              id: projectId,
+            });
+            sessionStorage.removeItem("billingsData");
+          } catch (err) {
+            console.error("Error adding billing:", err);
+          }
         }
-        props.Notify(
-          "success",
-          "Success",
-          billingsData?.length > 0 &&
-            PMOusers?.some(
-              (user) =>
-                user?.email?.toLowerCase() ===
-                props?.loginUserEmail?.toLowerCase()
-            )
-            ? "Details added successfully. Now click Send Approval button"
-            : props?.isAdd
-            ? "Details added successfully"
-            : ""
-        );
-        setIsApproval({
-          boolean: true,
-          id: projectId,
-        });
-        sessionStorage.removeItem("billingsData");
-        PMOusers?.some(
-          (user) =>
-            user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-        )
-          ? ""
-          : emptyDatas();
-      })
-      .catch((err) => {
-        console.log(
-          err,
-          "Add Datas to CRMProjects err in ProjectsFormPage.tsx component"
-        );
+      }
+
+      // 3. Success notify
+      props.Notify(
+        "success",
+        "Success",
+        billingsData?.length > 0 &&
+          PMOusers?.some(
+            (user) =>
+              user?.email?.toLowerCase() ===
+              props?.loginUserEmail?.toLowerCase()
+          )
+          ? "Details added successfully. Now click Send Approval button"
+          : props?.isAdd
+          ? "Details added successfully"
+          : ""
+      );
+
+      // 4. Reset approval + cleanup
+      setIsApproval({
+        boolean: true,
+        id: projectId,
       });
+      sessionStorage.removeItem("billingsData");
+      setLoader(false);
+      PMOusers?.some(
+        (user) =>
+          user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+      )
+        ? ""
+        : emptyDatas();
+    } catch (err) {
+      console.log(
+        err,
+        "Add Datas to CRMProjects err in ProjectsFormPage.tsx component"
+      );
+    }
+  };
+
+  //Add attachment to library:
+  const addAttachmentsInLibrary = async (
+    ProjectID: number,
+    uploadFiles: File[]
+  ) => {
+    try {
+      for (const file of uploadFiles) {
+        const fileBuffer = await file.arrayBuffer();
+
+        const uploadResult = await sp.web
+          .getFolderByServerRelativeUrl(Config.LibraryNames?.ProjectFiles)
+          .files.add(file.name, fileBuffer, true);
+
+        const item = await uploadResult.file.listItemAllFields.get();
+
+        await sp.web.lists
+          .getByTitle(Config.LibraryNames?.ProjectFiles)
+          .items.getById(item.Id)
+          .update({
+            projectId: ProjectID,
+          });
+      }
+      setFiles([]);
+    } catch (error) {
+      console.error("Error uploading project files:", error);
+    }
   };
 
   //Project manager status updated funtions :
@@ -467,6 +581,69 @@ const ProjectFormPage = (props: any) => {
       });
   };
 
+  //Handle File Selection:
+  const handleFileSelection = async (e, files, setFiles, Config) => {
+    try {
+      const existingSPFiles = await sp.web.lists
+        .getByTitle(Config?.LibraryNames?.ProjectFiles)
+        .items.select("FileLeafRef")
+        .filter(`IsDelete eq false`)
+        .get();
+
+      const spFileNames = existingSPFiles.map((file) => file.FileLeafRef);
+
+      const duplicatesInSP = e.files.filter((newFile) =>
+        spFileNames.includes(newFile.name)
+      );
+
+      const duplicatesInState = e.files.filter((newFile) =>
+        files.some((existing) => existing.name === newFile.name)
+      );
+
+      const totalDuplicates = [...duplicatesInSP, ...duplicatesInState];
+
+      const newFiles = e.files.filter(
+        (newFile) =>
+          !spFileNames.includes(newFile.name) &&
+          !files.some((existing) => existing.name === newFile.name)
+      );
+
+      if (totalDuplicates.length > 0) {
+        props.Notify("info", "Info", "Some file names already exist!");
+      }
+
+      if (newFiles.length > 0) {
+        setFiles([...files, ...newFiles]);
+      }
+    } catch (error) {
+      console.error("Error in file selection:", error);
+    }
+  };
+
+  //DownLoad File Function:
+  const downloadFile = (file: any) => {
+    const anchortag = document.createElement("a");
+    anchortag.setAttribute("href", file?.ulr ? file?.ulr : file?.objectURL);
+    anchortag.setAttribute("target", "_blank");
+    anchortag.setAttribute("download", "");
+    anchortag.click();
+    anchortag.remove();
+  };
+
+  // Temporary Remove File (state only):
+  const removeFile = (fileName: string) => {
+    // Find the file that was removed
+    const removedFile = files.find((file) => file.name === fileName);
+
+    if (removedFile) {
+      setDeletedFiles((prev) => [...prev, removedFile]); // keep track of removed
+    }
+
+    // Remove from current UI state
+    const updatedFiles = files.filter((file) => file.name !== fileName);
+    setFiles(updatedFiles);
+  };
+
   //Initial Render:
   React.useEffect(() => {
     getLeads();
@@ -491,385 +668,468 @@ const ProjectFormPage = (props: any) => {
   }, []);
 
   return (
-    <div style={{ overflow: "auto" }} className={styles.viewFormMain}>
-      <div className={styles.viewFormNavBar}>
-        <h2>
-          {props?.isAdd
-            ? "Add Projects"
-            : props?.isEdit
-            ? "Edit Projects"
-            : "View Projects"}
-        </h2>
-      </div>
-      <div className={selfComponentStyles.formPage}>
-        <div className={selfComponentStyles.firstPage}>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Project id</Label>
-            <InputText
-              onChange={(e) => handleOnChange("ProjectID", e.target.value)}
-              value={
-                props?.isView || props?.isEdit
-                  ? formData?.ProjectID
-                  : "Auto generate"
-              }
-              disabled
-            />
+    <>
+      {loader ? (
+        <Loading />
+      ) : (
+        <div style={{ overflow: "auto" }} className={styles.viewFormMain}>
+          <div className={styles.viewFormNavBar}>
+            <h2>
+              {props?.isAdd
+                ? "Add Projects"
+                : props?.isEdit
+                ? "Edit Projects"
+                : "View Projects"}
+            </h2>
           </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Lead</Label>
-            <Dropdown
-              value={formData?.Lead}
-              options={leadOptions}
-              optionLabel="name"
-              onChange={(e) => handleOnChange("Lead", e.value)}
-              disabled={props?.isView}
-              style={
-                errorMessage["Lead"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Account name</Label>
-            <InputText
-              onChange={(e) => handleOnChange("AccountName", e.target.value)}
-              value={formData?.AccountName}
-              disabled={props?.isView}
-              style={
-                errorMessage["AccountName"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Project name</Label>
-            <InputText
-              onChange={(e) => handleOnChange("ProjectName", e.target.value)}
-              value={formData?.ProjectName}
-              disabled={props?.isView}
-              style={
-                errorMessage["ProjectName"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Start date</Label>
-            <DatePicker
-              value={
-                formData?.StartDate ? new Date(formData.StartDate) : undefined
-              }
-              styles={
-                errorMessage["StartDate"]
-                  ? {
-                      root: {
-                        border: "2px solid #ff0000",
-                        height: "35px",
-                        borderRadius: "4px",
-                      },
+          <div
+            style={{ height: "auto" }}
+            className={selfComponentStyles.formPage}
+          >
+            <div className={selfComponentStyles.firstPage}>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Project id</Label>
+                <InputText
+                  onChange={(e) => handleOnChange("ProjectID", e.target.value)}
+                  value={
+                    props?.isView || props?.isEdit
+                      ? formData?.ProjectID
+                      : "Auto generate"
+                  }
+                  disabled
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Lead</Label>
+                <Dropdown
+                  value={formData?.Lead}
+                  options={leadOptions}
+                  optionLabel="name"
+                  onChange={(e) => handleOnChange("Lead", e.value)}
+                  disabled={props?.isView}
+                  style={
+                    errorMessage["Lead"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Account name</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("AccountName", e.target.value)
+                  }
+                  value={formData?.AccountName}
+                  disabled={props?.isView}
+                  style={
+                    errorMessage["AccountName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Project name</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("ProjectName", e.target.value)
+                  }
+                  value={formData?.ProjectName}
+                  disabled={props?.isView}
+                  style={
+                    errorMessage["ProjectName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Start date</Label>
+                <DatePicker
+                  value={
+                    formData?.StartDate
+                      ? new Date(formData.StartDate)
+                      : undefined
+                  }
+                  styles={
+                    errorMessage["StartDate"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  onSelectDate={(date) => handleOnChange("StartDate", date)}
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Attachment</Label>
+                {!props?.isView ? (
+                  <FileUpload
+                    className="addFileButton"
+                    name="demo[]"
+                    mode="basic"
+                    onSelect={(e) =>
+                      handleFileSelection(e, files, setFiles, Config)
                     }
-                  : DatePickerStyles
-              }
-              onSelectDate={(date) => handleOnChange("StartDate", date)}
-              disabled={props?.isView}
-            />
-          </div>
-        </div>
-        <div className={selfComponentStyles.secondPage}>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>BillingContactName</Label>
-            <InputText
-              onChange={(e) =>
-                handleOnChange("BillingContactName", e.target.value)
-              }
-              value={formData?.BillingContactName}
-              disabled={props?.isView}
-              style={
-                errorMessage["BillingContactName"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Planned end date</Label>
-            <DatePicker
-              value={
-                formData?.PlannedEndDate
-                  ? new Date(formData?.PlannedEndDate)
-                  : undefined
-              }
-              styles={
-                errorMessage["PlannedEndDate"]
-                  ? {
-                      root: {
-                        border: "2px solid #ff0000",
-                        height: "35px",
-                        borderRadius: "4px",
-                      },
-                    }
-                  : DatePickerStyles
-              }
-              onSelectDate={(date) => handleOnChange("PlannedEndDate", date)}
-              disabled={props?.isView}
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Project manager</Label>
-            <div
-              className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
-            >
-              <PeoplePicker
-                styles={
-                  errorMessage["ProjectManager"]
-                    ? peopleErrorPickerStyles
-                    : peoplePickerStyles
-                }
-                ensureUser
-                placeholder="Select the Person"
-                personSelectionLimit={1}
-                context={ConfigureationData.context}
-                defaultSelectedUsers={getSelectedEmails(
-                  props?.data?.ProjectManager
+                    url="/api/upload"
+                    auto
+                    multiple
+                    maxFileSize={1000000}
+                    style={{ width: "14%" }}
+                    chooseLabel="Browse"
+                    chooseOptions={{ icon: "pi pi-upload" }}
+                  />
+                ) : (
+                  ""
                 )}
-                webAbsoluteUrl={
-                  ConfigureationData.context._pageContext._web.absoluteUrl
-                }
-                resolveDelay={100}
-                onChange={(items: any[]) =>
-                  handleOnChange("ProjectManager", items)
-                }
-                disabled={props?.isView}
-              />
+              </div>
+              {files.length > 0 && (
+                <ul className="fileContainer">
+                  {files.map((file: any, index) => (
+                    <li className={selfComponentStyles?.fileList} key={index}>
+                      <div className={selfComponentStyles.filNameTag}>
+                        <div
+                          onClick={() => downloadFile(file)}
+                          style={{
+                            cursor: "pointer",
+                          }}
+                          title={file?.name}
+                        >
+                          {file?.name.length > 23
+                            ? `${file?.name.slice(0, 23)}...`
+                            : file?.name}
+                        </div>
+                        {!props?.isView ? (
+                          <div className={selfComponentStyles.filesIconDiv}>
+                            <i
+                              className="pi pi-times"
+                              onClick={() => removeFile(file?.name)}
+                            ></i>
+                          </div>
+                        ) : (
+                          ""
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className={selfComponentStyles.secondPage}>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>BillingContactName</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("BillingContactName", e.target.value)
+                  }
+                  value={formData?.BillingContactName}
+                  disabled={props?.isView}
+                  style={
+                    errorMessage["BillingContactName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Planned end date</Label>
+                <DatePicker
+                  value={
+                    formData?.PlannedEndDate
+                      ? new Date(formData?.PlannedEndDate)
+                      : undefined
+                  }
+                  styles={
+                    errorMessage["PlannedEndDate"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  onSelectDate={(date) =>
+                    handleOnChange("PlannedEndDate", date)
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Project manager</Label>
+                <div
+                  className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
+                >
+                  <PeoplePicker
+                    styles={
+                      errorMessage["ProjectManager"]
+                        ? peopleErrorPickerStyles
+                        : peoplePickerStyles
+                    }
+                    ensureUser
+                    placeholder="Select the Person"
+                    personSelectionLimit={1}
+                    context={ConfigureationData.context}
+                    defaultSelectedUsers={getSelectedEmails(
+                      props?.data?.ProjectManager
+                    )}
+                    webAbsoluteUrl={
+                      ConfigureationData.context._pageContext._web.absoluteUrl
+                    }
+                    resolveDelay={100}
+                    onChange={(items: any[]) =>
+                      handleOnChange("ProjectManager", items)
+                    }
+                    disabled={props?.isView}
+                  />
+                </div>
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Project Status</Label>
+                <Dropdown
+                  options={
+                    props?.initialCRMProjectsListDropContainer?.projectStaus
+                  }
+                  optionLabel="name"
+                  value={props?.initialCRMProjectsListDropContainer?.projectStaus.find(
+                    (item) => item.name === formData?.ProjectStatus
+                  )}
+                  onChange={(e) =>
+                    handleOnChange("ProjectStatus", e?.value?.name)
+                  }
+                  disabled
+                  style={
+                    errorMessage["ProjectStatus"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Billing model</Label>
+                <Dropdown
+                  options={
+                    props?.initialCRMProjectsListDropContainer?.BillingModel
+                  }
+                  optionLabel="name"
+                  value={props?.initialCRMProjectsListDropContainer?.BillingModel.find(
+                    (item) => item.name === formData?.BillingModel
+                  )}
+                  onChange={(e) =>
+                    handleOnChange("BillingModel", e?.value?.name)
+                  }
+                  disabled={props?.isView || props?.isEdit}
+                  style={
+                    errorMessage["BillingModel"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
+            <div className={selfComponentStyles.thirdPage}>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>BillingContactEmail</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("BillingContactEmail", e.target.value)
+                  }
+                  value={formData?.BillingContactEmail}
+                  disabled={props?.isView}
+                  style={
+                    errorMessage["BillingContactEmail"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>BillingContactMobile</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("BillingContactMobile", e.target.value)
+                  }
+                  value={formData?.BillingContactMobile}
+                  disabled={props?.isView}
+                  style={
+                    errorMessage["BillingContactMobile"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>BillingAddress</Label>
+                <InputTextarea
+                  onChange={(e) =>
+                    handleOnChange("BillingAddress", e.target.value)
+                  }
+                  value={formData?.BillingAddress}
+                  disabled={props?.isView}
+                  maxLength={500}
+                  style={
+                    errorMessage["BillingAddress"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Remarks</Label>
+                <InputTextarea
+                  onChange={(e) => handleOnChange("Remarks", e.target.value)}
+                  value={formData?.Remarks}
+                  disabled={props?.isView}
+                  maxLength={500}
+                  style={
+                    errorMessage["Remarks"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
             </div>
           </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Project Status</Label>
-            <Dropdown
-              options={props?.initialCRMProjectsListDropContainer?.projectStaus}
-              optionLabel="name"
-              value={props?.initialCRMProjectsListDropContainer?.projectStaus.find(
-                (item) => item.name === formData?.ProjectStatus
-              )}
-              onChange={(e) => handleOnChange("ProjectStatus", e?.value?.name)}
-              disabled
-              style={
-                errorMessage["ProjectStatus"]
-                  ? { border: "2px solid #ff0000", borderRadius: "4px" }
-                  : undefined
-              }
+          {formData.BillingModel && (
+            <Billings
+              getBillingsAddDetails={getBillingsAddDetails}
+              isAdd={props?.isAdd}
+              BillingModel={formData?.BillingModel}
+              data={props?.data}
+              goBack={props?.goBack}
+              spfxContext={props.spfxContext}
+              Notify={props.Notify}
+              setCurrentPage={props?.setCurrentPage}
             />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Billing model</Label>
-            <Dropdown
-              options={props?.initialCRMProjectsListDropContainer?.BillingModel}
-              optionLabel="name"
-              value={props?.initialCRMProjectsListDropContainer?.BillingModel.find(
-                (item) => item.name === formData?.BillingModel
-              )}
-              onChange={(e) => handleOnChange("BillingModel", e?.value?.name)}
-              disabled={props?.isView || props?.isEdit}
-              style={
-                errorMessage["BillingModel"]
-                  ? { border: "2px solid #ff0000", borderRadius: "4px" }
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-        <div className={selfComponentStyles.thirdPage}>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>BillingContactEmail</Label>
-            <InputText
-              onChange={(e) =>
-                handleOnChange("BillingContactEmail", e.target.value)
-              }
-              value={formData?.BillingContactEmail}
-              disabled={props?.isView}
-              style={
-                errorMessage["BillingContactEmail"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>BillingContactMobile</Label>
-            <InputText
-              onChange={(e) =>
-                handleOnChange("BillingContactMobile", e.target.value)
-              }
-              value={formData?.BillingContactMobile}
-              disabled={props?.isView}
-              style={
-                errorMessage["BillingContactMobile"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>BillingAddress</Label>
-            <InputTextarea
-              onChange={(e) => handleOnChange("BillingAddress", e.target.value)}
-              value={formData?.BillingAddress}
-              disabled={props?.isView}
-              maxLength={500}
-              style={
-                errorMessage["BillingAddress"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-          <div className={`${selfComponentStyles.allField} dealFormPage`}>
-            <Label>Remarks</Label>
-            <InputTextarea
-              onChange={(e) => handleOnChange("Remarks", e.target.value)}
-              value={formData?.Remarks}
-              disabled={props?.isView}
-              maxLength={500}
-              style={
-                errorMessage["Remarks"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-      </div>
-      {formData.BillingModel && (
-        <Billings
-          getBillingsAddDetails={getBillingsAddDetails}
-          isAdd={props?.isAdd}
-          BillingModel={formData?.BillingModel}
-          data={props?.data}
-          goBack={props?.goBack}
-          spfxContext={props.spfxContext}
-          Notify={props.Notify}
-          setCurrentPage={props?.setCurrentPage}
-        />
-      )}
-      <div className={styles.addUpdateBtns}>
-        {(props?.isAdd && isApproval?.boolean == false) ||
-        props?.isEdit ||
-        props?.isView ? (
-          <PrimaryButton
-            className={styles.cancelBtn}
-            iconProps={{ iconName: "cancel" }}
-            onClick={() => {
-              emptyDatas();
-              sessionStorage.removeItem("billingsData");
-            }}
-          >
-            Cancel
-          </PrimaryButton>
-        ) : (
-          ""
-        )}
-
-        {props?.isView == false && isApproval?.boolean == false && (
-          <PrimaryButton
-            className={styles.updateBtn}
-            iconProps={{ iconName: "Save" }}
-            onClick={() => {
-              Validation();
-            }}
-          >
-            {props?.isEdit ? "Update" : "Save"}
-          </PrimaryButton>
-        )}
-
-        {(PMOusers?.some(
-          (user) =>
-            user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-        ) &&
-          props?.isAdd) ||
-        (PMOusers?.some(
-          (user) =>
-            user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-        ) &&
-          formData?.ProjectStatus == "Rejected") ? (
-          <PrimaryButton
-            onClick={() => {
-              if (
-                (isApproval?.boolean && props?.isAdd) ||
-                (formData?.ProjectStatus == "Rejected" && props?.isEdit)
-              ) {
-                handleApprovalFunc();
-              } else {
-                props.Notify(
-                  "info",
-                  "Info",
-                  "Please save the data first, then click again to send approval"
-                );
-              }
-            }}
-            style={{ borderRadius: "5px" }}
-          >
-            {formData?.ProjectStatus == "Rejected"
-              ? "Resubmit"
-              : "Send approval"}
-          </PrimaryButton>
-        ) : (
-          ""
-        )}
-        {props?.isEdit &&
-          formData?.IsApproved &&
-          formData?.ProjectManager?.some(
-            (pm: IPeoplePickerDetails) =>
-              pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-          ) &&
-          formData?.ProjectStatus !== "Approved" &&
-          formData?.ProjectStatus !== "Rejected" && (
-            <>
-              <PrimaryButton
-                onClick={() => handleStatusUpdate("Pending")}
-                style={{ borderRadius: "5px" }}
-              >
-                Approve
-              </PrimaryButton>
-              <PrimaryButton
-                onClick={() => handleStatusUpdate("Rejected")}
-                className={styles.cancelBtn}
-              >
-                Reject
-              </PrimaryButton>
-            </>
           )}
-        {/*...................This buttons only DH Approvers.............................*/}
-        {props?.isEdit &&
-          DHusers?.some(
-            (user) =>
-              user?.email?.toLowerCase() ===
-              props?.loginUserEmail?.toLowerCase()
-          ) &&
-          formData?.IsProjectManager &&
-          formData?.IsApproved == false &&
-          formData?.ProjectStatus == "Pending" && (
-            <>
+          <div className={styles.addUpdateBtns}>
+            {(props?.isAdd && isApproval?.boolean == false) ||
+            props?.isEdit ||
+            props?.isView ? (
+              <PrimaryButton
+                className={styles.cancelBtn}
+                iconProps={{ iconName: "cancel" }}
+                onClick={() => {
+                  emptyDatas();
+                  sessionStorage.removeItem("billingsData");
+                }}
+              >
+                Cancel
+              </PrimaryButton>
+            ) : (
+              ""
+            )}
+
+            {props?.isView == false && isApproval?.boolean == false && (
+              <PrimaryButton
+                className={styles.updateBtn}
+                iconProps={{ iconName: "Save" }}
+                onClick={() => {
+                  Validation();
+                }}
+              >
+                {props?.isEdit ? "Update" : "Save"}
+              </PrimaryButton>
+            )}
+
+            {(PMOusers?.some(
+              (user) =>
+                user?.email?.toLowerCase() ===
+                props?.loginUserEmail?.toLowerCase()
+            ) &&
+              props?.isAdd) ||
+            (PMOusers?.some(
+              (user) =>
+                user?.email?.toLowerCase() ===
+                props?.loginUserEmail?.toLowerCase()
+            ) &&
+              formData?.ProjectStatus == "Rejected") ? (
               <PrimaryButton
                 onClick={() => {
-                  handleDHUsersStatusUpdate("Approved");
+                  if (
+                    (isApproval?.boolean && props?.isAdd) ||
+                    (formData?.ProjectStatus == "Rejected" && props?.isEdit)
+                  ) {
+                    handleApprovalFunc();
+                  } else {
+                    props.Notify(
+                      "info",
+                      "Info",
+                      "Please save the data first, then click again to send approval"
+                    );
+                  }
                 }}
                 style={{ borderRadius: "5px" }}
               >
-                Approve
+                {formData?.ProjectStatus == "Rejected"
+                  ? "Resubmit"
+                  : "Send approval"}
               </PrimaryButton>
-              <PrimaryButton
-                onClick={() => handleDHUsersStatusUpdate("Rejected")}
-                className={styles.cancelBtn}
-              >
-                Reject
-              </PrimaryButton>
-            </>
-          )}
-      </div>
-    </div>
+            ) : (
+              ""
+            )}
+            {props?.isEdit &&
+              formData?.IsApproved &&
+              formData?.ProjectManager?.some(
+                (pm: IPeoplePickerDetails) =>
+                  pm?.email?.toLowerCase() ===
+                  props?.loginUserEmail?.toLowerCase()
+              ) &&
+              formData?.ProjectStatus !== "Approved" &&
+              formData?.ProjectStatus !== "Rejected" && (
+                <>
+                  <PrimaryButton
+                    onClick={() => handleStatusUpdate("Pending")}
+                    style={{ borderRadius: "5px" }}
+                  >
+                    Approve
+                  </PrimaryButton>
+                  <PrimaryButton
+                    onClick={() => handleStatusUpdate("Rejected")}
+                    className={styles.cancelBtn}
+                  >
+                    Reject
+                  </PrimaryButton>
+                </>
+              )}
+            {/*...................This buttons only DH Approvers.............................*/}
+            {props?.isEdit &&
+              DHusers?.some(
+                (user) =>
+                  user?.email?.toLowerCase() ===
+                  props?.loginUserEmail?.toLowerCase()
+              ) &&
+              formData?.IsProjectManager &&
+              formData?.IsApproved == false &&
+              formData?.ProjectStatus == "Pending" && (
+                <>
+                  <PrimaryButton
+                    onClick={() => {
+                      handleDHUsersStatusUpdate("Approved");
+                    }}
+                    style={{ borderRadius: "5px" }}
+                  >
+                    Approve
+                  </PrimaryButton>
+                  <PrimaryButton
+                    onClick={() => handleDHUsersStatusUpdate("Rejected")}
+                    className={styles.cancelBtn}
+                  >
+                    Reject
+                  </PrimaryButton>
+                </>
+              )}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 export default ProjectFormPage;

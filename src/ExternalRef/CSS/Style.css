@@ -590,3 +590,43 @@ h4 {
 .p-paginator .p-paginator-pages .p-paginator-page:not(.p-highlight):hover {
   background-color: #fff;
 }
+
+/*file upload button common styles....................*/
+.addFileButton .p-button {
+  background-color: white;
+  display: flex;
+  width: max-content;
+  gap: 1px;
+  color: black;
+  font-weight: 500;
+  font-size: 12px;
+  border: 1px solid #00a99d;
+  border-radius: 5px;
+  cursor: pointer;
+  align-items: center;
+}
+.addFileButton .p-button .p-button-icon {
+  font-size: 12px;
+}
+.pi-times {
+  font-size: 8px;
+  cursor: pointer;
+  color: white;
+  background: #00a99d;
+  width: 18px;
+  height: 18px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.fileContainer {
+  list-style: none;
+  padding: 0px;
+  margin: 0;
+  display: flex;
+  width: 290%;
+  flex-wrap: wrap;
+  gap: 1%;
+  margin-left: 74px;
+}

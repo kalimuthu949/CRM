@@ -491,3 +491,25 @@ $ThemePrimeryColor: #00a99d;
     }
   }
 }
+
+.fileList {
+  display: flex;
+  align-items: center;
+  margin: 0 0px 7px 0;
+}
+.filNameTag {
+  background-color: #f2f2f2;
+  color: #363a3c;
+  font-weight: 500;
+  padding: 5px 14px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  font-size: 12px;
+  .filesIconDiv {
+    display: flex;
+    font-size: 16px;
+    align-items: center;
+    padding-left: 14px;
+  }
+}
