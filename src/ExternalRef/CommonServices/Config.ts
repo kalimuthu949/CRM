@@ -24,6 +24,9 @@ export namespace Config {
     PMOpportunity: "PMOpportunity",
     CRMBillings: "CRMBillings",
   };
+  export const LibraryNames: ILibrary = {
+    ProjectFiles: "ProjectFiles",
+  };
   export const GroupNames: IGroup = {
     PMO: "PMO",
     DH: "DH",

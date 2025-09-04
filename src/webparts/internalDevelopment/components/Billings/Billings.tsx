@@ -205,7 +205,7 @@ const Billings = (props: any) => {
           `}
           >
             <div className={styles.filterBar}>
-              <h2>Milestones ({props?.data?.BillingModel} based)</h2>
+              <h2>Milestones ({props?.BillingModel} based)</h2>
             </div>
             <div className={styles.filterBtns}>
               <div className="all_search">
