@@ -36,6 +36,7 @@ import Billings from "../Billings/Billings";
 import { InputTextarea } from "primereact/inputtextarea";
 import { FileUpload } from "primereact/fileupload";
 import Loading from "../../../../ExternalRef/Loader/Loading";
+import { Dialog } from "primereact/dialog";
 
 const ProjectFormPage = (props: any) => {
   // Local Variables:
@@ -58,6 +59,8 @@ const ProjectFormPage = (props: any) => {
     boolean: false,
     id: null,
   });
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   //Data refresh and goBack mainPage function:
   const emptyDatas = () => {
@@ -644,6 +647,31 @@ const ProjectFormPage = (props: any) => {
     setFiles(updatedFiles);
   };
 
+  // Handle Reject Dialog Hide with Reason:
+  const handleRejectWithReason = () => {
+    if (rejectReason.trim() === "") {
+      props.Notify("error", "Error", "Please enter a reason for rejection");
+    } else {
+      const json = {
+        Reason: rejectReason,
+        ProjectId: props?.data?.ID,
+      };
+
+      SPServices.SPAddItem({
+        Listname: Config.ListNames.RejectComments,
+        RequestJSON: json,
+      })
+        .then(() => {
+          handleStatusUpdate("Rejected");
+          setRejectReason("");
+          setShowRejectDialog(false);
+        })
+        .catch((err) => {
+          console.log(err, "Error in adding reject reason");
+        });
+    }
+  };
+
   //Initial Render:
   React.useEffect(() => {
     getLeads();
@@ -925,7 +953,7 @@ const ProjectFormPage = (props: any) => {
                   onChange={(e) =>
                     handleOnChange("BillingModel", e?.value?.name)
                   }
-                  disabled={props?.isView || props?.isEdit}
+                  disabled={props?.isView || formData?.BillingModel}
                   style={
                     errorMessage["BillingModel"]
                       ? { border: "2px solid #ff0000", borderRadius: "4px" }
@@ -999,6 +1027,7 @@ const ProjectFormPage = (props: any) => {
           </div>
           {formData.BillingModel && (
             <Billings
+              loginUserEmail={props?.loginUserEmail}
               getBillingsAddDetails={getBillingsAddDetails}
               isAdd={props?.isAdd}
               BillingModel={formData?.BillingModel}
@@ -1092,7 +1121,8 @@ const ProjectFormPage = (props: any) => {
                     Approve
                   </PrimaryButton>
                   <PrimaryButton
-                    onClick={() => handleStatusUpdate("Rejected")}
+                    // onClick={() => handleStatusUpdate("Rejected")}
+                    onClick={() => setShowRejectDialog(true)}
                     className={styles.cancelBtn}
                   >
                     Reject
@@ -1129,6 +1159,53 @@ const ProjectFormPage = (props: any) => {
           </div>
         </div>
       )}
+      <Dialog
+        header="Enter Rejection Reason"
+        visible={showRejectDialog}
+        style={{ width: "400px" }}
+        modal
+        onHide={() => setShowRejectDialog(false)}
+      >
+        <div className="p-fluid">
+          <div className="p-field">
+            <Label>Reason</Label>
+            <InputTextarea
+              id="reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={5}
+              autoResize
+            />
+          </div>
+        </div>
+
+        <div className={selfComponentStyles.reasonButtonContainer}>
+          <PrimaryButton
+            className={styles.cancelBtn}
+            style={{
+              backgroundColor: "#aa1f1f",
+              color: "#fff",
+              borderRadius: "4px",
+            }}
+            iconProps={{ iconName: "cancel" }}
+            onClick={() => setShowRejectDialog(false)}
+          >
+            Cancel
+          </PrimaryButton>
+          <PrimaryButton
+            style={{
+              backgroundColor: "#0d900d",
+              color: "#fff",
+              borderRadius: "4px",
+            }}
+            className={styles.updateBtn}
+            iconProps={{ iconName: "Save" }}
+            onClick={handleRejectWithReason}
+          >
+            OK
+          </PrimaryButton>
+        </div>
+      </Dialog>
     </>
   );
 };

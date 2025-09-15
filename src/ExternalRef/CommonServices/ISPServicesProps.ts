@@ -19,13 +19,6 @@ export interface IListItems {
   PageNumber?: number;
 }
 
-export interface IListItemUsingId {
-  Listname: string;
-  Select?: string;
-  Expand?: string;
-  SelectedId: number;
-}
-
 export interface IAddList {
   Listname: string;
   RequestJSON: object;
@@ -45,6 +38,13 @@ export interface IUpdateList {
   Listname: string;
   RequestJSON: object;
   ID: number;
+}
+
+export interface IListItemUsingId {
+  Listname: string;
+  Select?: string;
+  Expand?: string;
+  SelectedId: number;
 }
 
 export interface IDetailsListGroup {

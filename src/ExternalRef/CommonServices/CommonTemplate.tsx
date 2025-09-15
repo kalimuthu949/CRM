@@ -129,3 +129,12 @@ export const peoplePickerTemplate = (user: IPeoplePickerDetails) => {
     </>
   );
 };
+
+//Text Template in Multiline with tooltip:
+export const textTemplate = (text: string) => {
+  return (
+    <div className="MultilinedisplayText" title={text}>
+      {text}
+    </div>
+  );
+};

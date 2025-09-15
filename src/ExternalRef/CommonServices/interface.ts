@@ -64,5 +64,6 @@ export interface IBillingsDetails {
   BillingFrequency: string;
   ResourceType: string;
   Rate: number;
+  Hours: string;
   ProjectId: number;
 }

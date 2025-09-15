@@ -29,6 +29,7 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
+  console.log(props, "billings props");
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
   const BillingModel: string = props?.data?.BillingModel || props?.BillingModel;
@@ -36,6 +37,7 @@ const Billings = (props: any) => {
   const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
   const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
   const BackImage: string = require("../../../../ExternalRef/Images/back.png");
+  const invoiceImage: string = require("../../../../ExternalRef/Images/invoice.png");
 
   //Local States:
   const [billingsDetails, setBillingDetails] = React.useState<
@@ -99,6 +101,7 @@ const Billings = (props: any) => {
             BillingFrequency: items?.BillingFrequency,
             ResourceType: items?.ResourceType,
             Rate: items?.Rate,
+            Hours: items?.Hours,
             ProjectId: items?.ProjectId,
           });
         });
@@ -122,7 +125,6 @@ const Billings = (props: any) => {
 
   //Delete Particular Item:
   const TrashItem = () => {
-    debugger;
     if (props?.isAdd) {
       setBillingDetails((prev) => {
         const sessionData = sessionStorage.getItem("billingsData");
@@ -319,6 +321,9 @@ const Billings = (props: any) => {
               {BillingModel == "T&M" && (
                 <Column sortable field="Rate" header="Rate"></Column>
               )}
+              {BillingModel == "T&M" && (
+                <Column sortable field="Hours" header="Hours"></Column>
+              )}
               {BillingModel == "FixedMonthly" && (
                 <Column
                   sortable
@@ -379,6 +384,23 @@ const Billings = (props: any) => {
                           alt="no image"
                         ></img>
                       </div>
+                      {props?.data?.ProjectStatus == "Approved" &&
+                        props?.data?.ProjectManager?.some(
+                          (user: any) => user?.email == props?.loginUserEmail
+                        ) &&
+                        rowData?.Status == "Planned" && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <img
+                              title="Raise Invoice"
+                              src={invoiceImage}
+                              alt="no image"
+                            />
+                          </div>
+                        )}
                     </div>
                   );
                 }}
