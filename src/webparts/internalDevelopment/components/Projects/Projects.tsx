@@ -25,6 +25,7 @@ import { Column } from "primereact/column";
 import {
   multiPeoplePickerTemplate,
   peoplePickerTemplate,
+  textTemplate,
 } from "../../../../ExternalRef/CommonServices/CommonTemplate";
 import {
   IBasicDropDown,
@@ -38,6 +39,8 @@ import { Modal, PrimaryButton } from "@fluentui/react";
 import Billings from "../Billings/Billings";
 import { Dropdown } from "primereact/dropdown";
 import Loading from "../../../../ExternalRef/Loader/Loading";
+import ChangeLog from "../ChangeLog/ChangeLog";
+import { Dialog } from "primereact/dialog";
 interface IProps {
   Notify: (
     type: "info" | "success" | "warn" | "error" | "secondary" | "contrast",
@@ -51,10 +54,12 @@ interface IProps {
 }
 //Global Image Variables:
 const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
+const commentsImage: string = require("../../../../ExternalRef/Images/comment.png");
 const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
 const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
 const BillingImage: string = require("../../../../ExternalRef/Images/bill.png");
 console.log(BillingImage);
+const VersionHistoryImage: string = require("../../../../ExternalRef/Images/versionHistory.png");
 const FilterImage: string = require("../../../../ExternalRef/Images/filter.png");
 const FilterNoneImage: string = require("../../../../ExternalRef/Images/filternone.png");
 
@@ -98,6 +103,15 @@ const Projects = (props: IProps): JSX.Element => {
     ...Config.CRMProjectsDropDown,
   });
   const [loader, setLoader] = React.useState<boolean>(false);
+  const [isChangeLogOpen, setIsChangeLogOpen] = React.useState<boolean>(false);
+  const [eventID, setEventID] = React.useState<any>(null);
+  const [rejectComments, setRejectComments] = React.useState<any[]>([]);
+  const [isCommentsModal, setIsCommentsModal] = React.useState<IDelModal>({
+    ...Config.initialModal,
+  });
+  console.log(rejectComments, "rejectComments");
+  const [isCmtsLoader, setIsCmtsLoader] = React.useState(false);
+  console.log(isCmtsLoader, "isCmtsLoader");
 
   //Get Project Details:
   const getProjectDetails = () => {
@@ -210,6 +224,46 @@ const Projects = (props: IProps): JSX.Element => {
       });
   };
 
+  //Get RejectComments Details:
+  const getAllRejectComments = (ID: number) => {
+    SPServices.SPReadItems({
+      Listname: Config.ListNames?.RejectComments,
+      Select: "*,Project/ID,Author/Title,Author/EMail,Author/ID",
+      Expand: "Project,Author",
+      Filter: [
+        {
+          FilterKey: "ProjectId",
+          Operator: "eq",
+          FilterValue: ID.toString(),
+        },
+      ],
+      Orderby: "Modified",
+      Orderbydecorasc: false,
+    })
+      .then((res) => {
+        let tempRejectComments: any[] = [];
+        if (res?.length) {
+          res?.forEach((val: any) => {
+            tempRejectComments.push({
+              reason: val?.Reason,
+              reasonUser: {
+                name: val?.Author?.Title,
+                email: val?.Author?.EMail,
+                id: val?.Author?.ID,
+              },
+              created: val?.Created ? new Date(val?.Created) : null,
+            });
+          });
+        }
+        setRejectComments([...tempRejectComments]);
+        setIsCmtsLoader(false);
+      })
+      .catch((err) => {
+        setIsCmtsLoader(false);
+        console.log("get ActionRegister Details", err);
+      });
+  };
+
   //Render Manager Column function:
   const renderManagersColumn = (rowData: IProjectData) => {
     const projectManagers: IPeoplePickerDetails[] = rowData?.ProjectManager;
@@ -303,6 +357,107 @@ const Projects = (props: IProps): JSX.Element => {
       );
     });
     setProjectDetails(filtered);
+  };
+
+  //ChangeLog Details:
+  let changeLogDetails: any = {
+    id: eventID,
+    listName: Config.ListNames?.CRMProjects,
+    columns: [
+      {
+        key: "ProjectID",
+        type: "Text",
+        name: "Project ID",
+      },
+      {
+        key: "Lead",
+        type: "Lookup",
+        name: "Lead",
+      },
+      {
+        key: "AccountName",
+        type: "Text",
+        name: "Account Name",
+      },
+      {
+        key: "ProjectName",
+        type: "Text",
+        name: "Project Name",
+      },
+      {
+        key: "StartDate",
+        type: "Date",
+        name: "Start Date",
+      },
+      {
+        key: "PlannedEndDate",
+        type: "Date",
+        name: "Planned End Date",
+      },
+      {
+        key: "ProjectManager",
+        type: "PeoplePickerMultiple",
+        name: "Project Manager",
+      },
+      {
+        key: "ProjectStatus",
+        type: "Text",
+        name: "Project Status",
+      },
+      {
+        key: "BillingModel",
+        type: "Text",
+        name: "Billing Model",
+      },
+      {
+        key: "BillingContactName",
+        type: "Text",
+        name: "Billing Contact Name",
+      },
+      {
+        key: "BillingContactEmail",
+        type: "Text",
+        name: "Billing Contact Email",
+      },
+      {
+        key: "BillingContactMobile",
+        type: "Text",
+        name: "Billing Contact Mobile",
+      },
+      {
+        key: "BillingAddress",
+        type: "Text",
+        name: "Billing Address",
+      },
+      {
+        key: "Remarks",
+        type: "Text",
+        name: "Remarks",
+      },
+    ],
+  };
+
+  //Render Reject Reason Created Date function:
+  const rejectReasonCreatedDate = (date: Date) => {
+    return (
+      <>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            alignItems: "center",
+          }}
+          className="displayText"
+        >
+          {date ? moment(date).format("DD-MM-YYYY") : ""}
+        </div>
+      </>
+    );
+  };
+
+  //ChangeLog Cancel function:
+  const handleClose = () => {
+    setIsChangeLogOpen(false);
   };
 
   //Initial Render:
@@ -549,19 +704,38 @@ const Projects = (props: IProps): JSX.Element => {
                           alt="no image"
                         ></img>
                       </div>
-                      {/* <div
+                      <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedData(rowData);
-                          setCurrentPage("BillingList");
+                          setEventID(rowData?.ID);
+                          setIsChangeLogOpen(true);
                         }}
                       >
                         <img
-                          title="Billings"
-                          src={BillingImage}
+                          title="Audit Logs"
+                          src={VersionHistoryImage}
                           alt="no image"
                         ></img>
-                      </div> */}
+                      </div>
+                      {rowData?.ProjectStatus === "Rejected" && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsCmtsLoader(true);
+                            setIsCommentsModal({
+                              isOpen: true,
+                              Id: rowData?.ID,
+                            });
+                            getAllRejectComments(rowData?.ID);
+                          }}
+                        >
+                          <img
+                            title="Reject Comments"
+                            src={commentsImage}
+                            alt="no image"
+                          ></img>
+                        </div>
+                      )}
                     </div>
                   );
                 }}
@@ -623,6 +797,81 @@ const Projects = (props: IProps): JSX.Element => {
           />
         </div>
       </Modal>
+      <ChangeLog
+        context={props.spfxContext}
+        handleClose={handleClose}
+        isOpen={isChangeLogOpen}
+        details={changeLogDetails}
+      />
+
+      <Dialog
+        className="modal-template"
+        header={
+          <div className="modal-header">
+            <h3 style={{ fontSize: 18, fontWeight: 600 }}>Rejected Reasons</h3>
+          </div>
+        }
+        draggable={false}
+        blockScroll={false}
+        resizable={false}
+        visible={isCommentsModal.isOpen}
+        style={{ width: "50%" }}
+        onHide={() => {
+          setIsCommentsModal({ isOpen: false, Id: null });
+        }}
+      >
+        {isCmtsLoader ? (
+          <div
+            style={{
+              width: "100%",
+              height: "60vh",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <Loading />
+          </div>
+        ) : (
+          <div className={`template-table-content`}>
+            <div
+              className={`template-table-data`}
+              style={{ padding: "0px 10px" }}
+            >
+              <DataTable
+                value={rejectComments}
+                tableStyle={{ width: "100%" }}
+                stripedRows
+                paginator
+                rows={5}
+                emptyMessage={
+                  <>
+                    <p style={{ textAlign: "center" }}>No Comments Found</p>
+                  </>
+                }
+              >
+                <Column
+                  field="reason"
+                  header="Reason"
+                  style={{ width: "33.3%" }}
+                  body={(row: any) => textTemplate(row?.reason)}
+                ></Column>
+                <Column
+                  field="Reason"
+                  header="Created By"
+                  style={{ width: "33.3%" }}
+                  body={(row: any) => peoplePickerTemplate(row?.reasonUser)}
+                ></Column>
+                <Column
+                  field="Reason"
+                  header="Date"
+                  body={(row: any) => rejectReasonCreatedDate(row?.created)}
+                  style={{ width: "33.3%" }}
+                ></Column>
+              </DataTable>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </>
   );
 };

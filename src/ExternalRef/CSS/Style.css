@@ -630,3 +630,91 @@ h4 {
   gap: 1%;
   margin-left: 74px;
 }
+
+/* Change Log Modal................................................ */
+.change-log-modal .p-dialog-header-icons {
+  position: absolute;
+  right: 2%;
+  top: 3%;
+}
+.change-log-modal .leftSideSection {
+  width: 50%;
+  text-align: left;
+  font-weight: 500;
+  background: #deeaed;
+  padding: 8px;
+  border-radius: 6px;
+  color: #061022;
+  font-size: 0.8rem;
+}
+.change-log-modal .collen {
+  width: 6%;
+  padding: 8px;
+  margin: 0;
+}
+.change-log-modal .rightSideSection {
+  width: 44%;
+  text-align: left;
+  padding: 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+.modal-template .p-dialog-header {
+  padding: 10px 0px;
+}
+
+.modal-template .p-dialog-content {
+  padding: 0;
+}
+
+.modal-header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.modal-header h3,
+.modal-header h4 {
+  margin: 0;
+  border-bottom: 2px solid #00a99d;
+  padding-bottom: 5px;
+  color: #00a99d;
+}
+
+.modal-container {
+  padding: 14px 20px;
+}
+
+.modal-content {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.modal-content p {
+  margin: 10px 0px 0px 0px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/*commn text styles................................................*/
+.MultilinedisplayText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: auto;
+  line-height: 1.5;
+  max-height: calc (1.5em * 12);
+}
+.displayText {
+  width: 99%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}

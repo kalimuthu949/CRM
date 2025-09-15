@@ -158,6 +158,20 @@ const BillingsForm = (props: any) => {
           value !== undefined &&
           value.toString().trim() !== ""
         );
+      case "Hours":
+        if (value) {
+          const regex = /^([0-9]+)(:[0-9]{1,2})?$/;
+          const match = value.match(regex);
+          if (match) {
+            const parts = value.split(":");
+            if (parts.length === 2) {
+              const minutes = Number(parts[1]);
+              return minutes >= 0 && minutes < 60;
+            }
+            return true; // Only hours entered without colon is valid
+          }
+        }
+        return false;
 
       case "DueDate":
       case "EndMonth":
@@ -195,6 +209,7 @@ const BillingsForm = (props: any) => {
       if (!isValidField("Rate", formData?.Rate)) errors.Rate = true;
       if (!isValidField("ResourceType", formData?.ResourceType))
         errors.ResourceType = true;
+      if (!isValidField("Hours", formData?.Hours)) errors.Hours = true;
     }
 
     if (billingModel === "FixedMonthly") {
@@ -234,6 +249,7 @@ const BillingsForm = (props: any) => {
       Notes: formData?.Notes ? formData?.Notes : "",
       ProjectId: props?.selectedProjectsData?.ID,
       Rate: formData?.Rate ? formData?.Rate : 0,
+      Hours: formData?.Hours ? formData?.Hours : "",
       ReminderDaysBeforeDue: formData?.ReminderDaysBeforeDue
         ? formData?.ReminderDaysBeforeDue
         : "",
@@ -335,10 +351,11 @@ const BillingsForm = (props: any) => {
         MonthlyAmount: null,
         Notes: "",
         Rate: null,
+        Hours: "",
         ReminderDaysBeforeDue: 7,
         ResourceType: "",
         StartMonth: null,
-        Status: "",
+        Status: "Planned",
       });
     }
   }, []);
@@ -426,7 +443,8 @@ const BillingsForm = (props: any) => {
                   ? { border: "2px solid #ff0000", borderRadius: "4px" }
                   : undefined
               }
-              disabled={props?.isView}
+              // disabled={props?.isView}
+              disabled
             />
           </div>
           <div className={`${projectFormStyles.allField} dealFormPage`}>
@@ -538,6 +556,27 @@ const BillingsForm = (props: any) => {
                   placeholder="Enter Rate"
                   style={
                     errorMessage["Rate"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${projectFormStyles.allField} dealFormPage`}>
+                <Label>Hours</Label>
+                <InputText
+                  value={formData?.Hours || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Allow only digits and colon
+                    const regex = /^[0-9:]*$/;
+                    if (regex.test(val)) {
+                      handleOnChange("Hours", val);
+                    }
+                  }}
+                  placeholder="Enter Hours (e.g. 90:20)"
+                  style={
+                    errorMessage["Hours"]
                       ? { border: "2px solid #ff0000" }
                       : undefined
                   }

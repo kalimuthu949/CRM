@@ -9,6 +9,7 @@ interface IList {
   PMOpportunity: string;
   CRMProjects: string;
   CRMBillings: string;
+  RejectComments: string;
 }
 interface ILibrary {
   ProjectFiles: string;

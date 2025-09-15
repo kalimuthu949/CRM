@@ -8,6 +8,7 @@ import {
   IBillingsDetails,
   ICRMBillingsListDrop,
   ICRMProjectsListDrop,
+  IDelModal,
 } from "./interface";
 import { IModalStyles } from "office-ui-fabric-react";
 
@@ -23,6 +24,7 @@ export namespace Config {
     PipeLineConfig: "PipeLineConfig",
     PMOpportunity: "PMOpportunity",
     CRMBillings: "CRMBillings",
+    RejectComments: "RejectComments",
   };
   export const LibraryNames: ILibrary = {
     ProjectFiles: "ProjectFiles",
@@ -39,6 +41,12 @@ export namespace Config {
   export const CRMProjectsDropDown: ICRMProjectsListDrop = {
     projectStaus: [],
     BillingModel: [],
+  };
+
+  //Initial Modal Config:
+  export const initialModal: IDelModal = {
+    isOpen: false,
+    Id: null,
   };
 
   //CRMBillings List DropDown:
@@ -74,6 +82,7 @@ export namespace Config {
     BillingFrequency: "",
     ResourceType: "",
     Rate: 0,
+    Hours: "",
     ProjectId: 0,
   };
 }

@@ -72,11 +72,15 @@ $ThemePrimeryColor: #00a99d;
   .Actions {
     display: flex;
     gap: 8px;
-
-    img {
+    align-items: center;
+    div {
       width: 18px;
       height: 18px;
       cursor: pointer;
+      img {
+        width: 100%;
+        height: 100%;
+      }
     }
   }
 }
@@ -512,4 +516,10 @@ $ThemePrimeryColor: #00a99d;
     align-items: center;
     padding-left: 14px;
   }
+}
+
+.reasonButtonContainer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
 }

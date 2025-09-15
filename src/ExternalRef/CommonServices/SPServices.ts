@@ -626,6 +626,17 @@ const GetAzureUsersGroups = async (params: IAzureUsers): Promise<any[]> => {
     });
 };
 
+const SPReadItemVersionHistory = async (
+  params: IListItemUsingId
+): Promise<[]> => {
+  return await sp.web.lists
+    .getByTitle(params.Listname)
+    .items.getById(params.SelectedId)
+    .versions.select(params.Select || "*")
+    .expand(params.Expand || "")
+    .get();
+};
+
 const GenerateFormatId = (
   prefix: string,
   lastId: string,
@@ -684,4 +695,5 @@ export default {
   fileRemove,
   GetAzureUsers,
   GetAzureUsersGroups,
+  SPReadItemVersionHistory,
 };
