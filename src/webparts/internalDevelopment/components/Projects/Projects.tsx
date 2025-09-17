@@ -336,13 +336,14 @@ const Projects = (props: IProps): JSX.Element => {
 
   //Global Search functionalities:
   const searchProjectDetails = (val: string) => {
+    console.log(val, "searchVal");
     setSearchVal(val);
     if (!val) {
       applyFilters();
       return;
     }
 
-    const filtered = projectDetails.filter((item) => {
+    const filtered = masterProjectDetails.filter((item) => {
       const managerNames =
         item?.ProjectManager?.map((pm) => pm.name?.toLowerCase()).join(" ") ||
         "";

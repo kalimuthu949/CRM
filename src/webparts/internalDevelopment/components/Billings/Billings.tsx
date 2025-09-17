@@ -159,6 +159,25 @@ const Billings = (props: any) => {
     }
   };
 
+  //Handle Invoice Trigger function:
+  const handleInvoiceTrigger = (Id: number) => {
+    SPServices.SPUpdateItem({
+      Listname: Config.ListNames?.CRMBillings,
+      ID: Id,
+      RequestJSON: {
+        InvoiceTrigger: true,
+        Status: "Due",
+      },
+    })
+      .then(() => {
+        props?.Notify("success", "Success", "Invoice Triggered successfully");
+        props?.goBack();
+      })
+      .catch((err: any) => {
+        console.log(err, "Invoice trigger error in Billings.tsx component");
+      });
+  };
+
   //Open BillingsForm popup:
   const openForm = (
     mode: "add" | "edit" | "view",
@@ -392,6 +411,7 @@ const Billings = (props: any) => {
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleInvoiceTrigger(rowData?.ID);
                             }}
                           >
                             <img

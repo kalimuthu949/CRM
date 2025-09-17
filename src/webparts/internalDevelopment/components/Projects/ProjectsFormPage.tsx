@@ -46,6 +46,7 @@ const ProjectFormPage = (props: any) => {
   //Local States:
   const [leadOptions, setLeadOptions] = useState<IBasicDropDown[]>([]);
   const [formData, setFormData] = useState<any>({});
+  console.log(formData, "formData in projectsFormPage.tsx");
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -376,7 +377,16 @@ const ProjectFormPage = (props: any) => {
 
       props.Notify("success", "Success", "Details updated successfully");
       setLoader(false);
-      emptyDatas();
+      PMOusers?.some(
+        (user) =>
+          user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+      )
+        ? ""
+        : emptyDatas();
+      setIsApproval({
+        boolean: true,
+        id: formData?.ID,
+      });
       sessionStorage.removeItem("billingsData");
     } catch (err) {
       console.log(
@@ -390,6 +400,7 @@ const ProjectFormPage = (props: any) => {
   const handleApprovalFunc = () => {
     const currObj = {
       IsApproved: true,
+      ProjectStatus: "PendingWithPM",
     };
     const reSubmitObj = {
       IsApproved: true,
@@ -672,6 +683,19 @@ const ProjectFormPage = (props: any) => {
     }
   };
 
+  //Check current user is PMO user or not and send approval button show and hide logics:
+  const isPMOUser = PMOusers?.some(
+    (user) =>
+      user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+  );
+  const canShowApprovalButton =
+    (isPMOUser &&
+      formData?.ProjectStatus === "Initiated" &&
+      (formData?.IsApproved === false || props?.isAdd)) ||
+    (isPMOUser &&
+      formData?.ProjectStatus === "Rejected" &&
+      (formData?.IsApproved === false || props?.isAdd));
+
   //Initial Render:
   React.useEffect(() => {
     getLeads();
@@ -953,7 +977,7 @@ const ProjectFormPage = (props: any) => {
                   onChange={(e) =>
                     handleOnChange("BillingModel", e?.value?.name)
                   }
-                  disabled={props?.isView || formData?.BillingModel}
+                  disabled={props?.isView}
                   style={
                     errorMessage["BillingModel"]
                       ? { border: "2px solid #ff0000", borderRadius: "4px" }
@@ -1039,8 +1063,9 @@ const ProjectFormPage = (props: any) => {
             />
           )}
           <div className={styles.addUpdateBtns}>
-            {(props?.isAdd && isApproval?.boolean == false) ||
-            props?.isEdit ||
+            {(formData?.ProjectStatus == "Initiated" &&
+              isApproval?.boolean == false) ||
+            (props?.isEdit && isApproval?.boolean == false) ||
             props?.isView ? (
               <PrimaryButton
                 className={styles.cancelBtn}
@@ -1068,22 +1093,26 @@ const ProjectFormPage = (props: any) => {
               </PrimaryButton>
             )}
 
-            {(PMOusers?.some(
+            {/* {(PMOusers?.some(
               (user) =>
                 user?.email?.toLowerCase() ===
                 props?.loginUserEmail?.toLowerCase()
             ) &&
-              props?.isAdd) ||
+              formData?.ProjectStatus == "Initiated" &&
+              (formData?.IsApproved == false || props?.isAdd)) ||
             (PMOusers?.some(
               (user) =>
                 user?.email?.toLowerCase() ===
                 props?.loginUserEmail?.toLowerCase()
             ) &&
-              formData?.ProjectStatus == "Rejected") ? (
+              formData?.ProjectStatus == "Rejected" &&
+              formData?.IsApproved == false) ||
+            props?.isAdd ? (
               <PrimaryButton
                 onClick={() => {
                   if (
-                    (isApproval?.boolean && props?.isAdd) ||
+                    (isApproval?.boolean &&
+                      formData?.ProjectStatus == "Initiated") ||
                     (formData?.ProjectStatus == "Rejected" && props?.isEdit)
                   ) {
                     handleApprovalFunc();
@@ -1091,7 +1120,7 @@ const ProjectFormPage = (props: any) => {
                     props.Notify(
                       "info",
                       "Info",
-                      "Please save the data first, then click again to send approval"
+                      "Please fill the all data first, then click again to send approval"
                     );
                   }
                 }}
@@ -1103,6 +1132,31 @@ const ProjectFormPage = (props: any) => {
               </PrimaryButton>
             ) : (
               ""
+            )} */}
+            {canShowApprovalButton && (
+              <PrimaryButton
+                onClick={() => {
+                  const canApprove =
+                    (isApproval?.boolean &&
+                      formData?.ProjectStatus === "Initiated") ||
+                    (formData?.ProjectStatus === "Rejected" && props?.isEdit);
+
+                  if (canApprove) {
+                    handleApprovalFunc();
+                  } else {
+                    props.Notify(
+                      "info",
+                      "Info",
+                      "Please fill all the data first, then click again to send approval"
+                    );
+                  }
+                }}
+                style={{ borderRadius: "5px" }}
+              >
+                {formData?.ProjectStatus === "Rejected"
+                  ? "Resubmit"
+                  : "Send approval"}
+              </PrimaryButton>
             )}
             {props?.isEdit &&
               formData?.IsApproved &&
@@ -1121,7 +1175,6 @@ const ProjectFormPage = (props: any) => {
                     Approve
                   </PrimaryButton>
                   <PrimaryButton
-                    // onClick={() => handleStatusUpdate("Rejected")}
                     onClick={() => setShowRejectDialog(true)}
                     className={styles.cancelBtn}
                   >
