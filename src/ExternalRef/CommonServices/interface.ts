@@ -16,6 +16,7 @@ export interface IProjectData {
   StartDate: string;
   PlannedEndDate: string;
   ProjectManager: IPeoplePickerDetails[];
+  DeliveryHead: IPeoplePickerDetails[];
   ProjectStatus: string;
   BillingModel: string;
   IsApproved: boolean;

@@ -71,6 +71,7 @@ const Projects = (props: IProps): JSX.Element => {
   const [projectDetails, setProjectDetails] = React.useState<IProjectData[]>(
     []
   );
+  const [PMOusers, setPMOusers] = React.useState<IPeoplePickerDetails[]>([]);
   const [masterProjectDetails, setMasterProjectDetails] = React.useState<
     IProjectData[]
   >([]);
@@ -118,8 +119,8 @@ const Projects = (props: IProps): JSX.Element => {
     SPServices.SPReadItems({
       Listname: Config.ListNames.CRMProjects,
       Select:
-        "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName",
-      Expand: "ProjectManager,Lead",
+        "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName,DeliveryHead/Id,DeliveryHead/EMail,DeliveryHead/Title",
+      Expand: "ProjectManager,Lead,DeliveryHead",
       Orderby: "Modified",
       Orderbydecorasc: true,
       Filter: [
@@ -143,6 +144,16 @@ const Projects = (props: IProps): JSX.Element => {
               });
             });
           }
+          let _DeliveryHead: IPeoplePickerDetails[] = [];
+          if (items?.DeliveryHead) {
+            items?.DeliveryHead.forEach((user: any) => {
+              _DeliveryHead.push({
+                id: user?.Id,
+                name: user?.Title,
+                email: user?.EMail,
+              });
+            });
+          }
           projectDetails.push({
             ID: items?.ID,
             ProjectID: items?.ProjectID,
@@ -153,6 +164,7 @@ const Projects = (props: IProps): JSX.Element => {
             StartDate: items?.StartDate,
             PlannedEndDate: items?.PlannedEndDate,
             ProjectManager: _ProjectManager ? _ProjectManager : [],
+            DeliveryHead: _DeliveryHead ? _DeliveryHead : [],
             ProjectStatus: items?.ProjectStatus,
             BillingModel: items?.BillingModel,
             IsApproved: items?.IsApproved,
@@ -170,6 +182,27 @@ const Projects = (props: IProps): JSX.Element => {
       })
       .catch((err) => {
         console.log(err, "getProjectDetails Error in Projects.tsx component");
+      });
+  };
+
+  //Get Group Members:
+  const getPMOGroupUsers = () => {
+    SPServices.getSPGroupMember({
+      GroupName: Config.GroupNames.PMO,
+    })
+      .then((res: any) => {
+        const tempUsers: IPeoplePickerDetails[] = [];
+        res.forEach((items: any) => {
+          tempUsers.push({
+            id: items?.Id,
+            email: items?.Email,
+            name: items?.Title,
+          });
+        });
+        setPMOusers([...tempUsers]);
+      })
+      .catch((err) => {
+        console.log(err, "Get PMO group users error in projectsFormPage.tsx");
       });
   };
 
@@ -214,6 +247,7 @@ const Projects = (props: IProps): JSX.Element => {
               })
             );
             setLoader(false);
+            getPMOGroupUsers();
           })
           .catch((err) => {
             console.log(err, "Get choice error from CRMProjects list");
@@ -274,6 +308,26 @@ const Projects = (props: IProps): JSX.Element => {
           : peoplePickerTemplate(projectManagers[0])}
       </div>
     );
+  };
+
+  //Render Delivery Heads Column function:
+  const renderDeliveryHeadsColumn = (rowData: IProjectData) => {
+    const deliveryHeads: IPeoplePickerDetails[] = rowData?.DeliveryHead;
+    return (
+      <div>
+        {rowData?.DeliveryHead?.length > 1
+          ? multiPeoplePickerTemplate(deliveryHeads)
+          : peoplePickerTemplate(deliveryHeads[0])}
+      </div>
+    );
+  };
+
+  //Render Status:
+  const renderStatus = (rowData: any) => {
+    if (rowData?.ProjectStatus === "Pending") {
+      return "PendingWithDH";
+    }
+    return rowData?.ProjectStatus;
   };
 
   //handle all filters:
@@ -347,6 +401,8 @@ const Projects = (props: IProps): JSX.Element => {
       const managerNames =
         item?.ProjectManager?.map((pm) => pm.name?.toLowerCase()).join(" ") ||
         "";
+      const deliveryHeadNames =
+        item?.DeliveryHead?.map((dh) => dh.name?.toLowerCase()).join(" ") || "";
       return (
         item.ProjectID?.toLowerCase().includes(val.toLowerCase()) ||
         item.Lead?.toLowerCase().includes(val.toLowerCase()) ||
@@ -354,7 +410,8 @@ const Projects = (props: IProps): JSX.Element => {
         item.ProjectName?.toLowerCase().includes(val.toLowerCase()) ||
         item.ProjectStatus?.toLowerCase().includes(val.toLowerCase()) ||
         item.BillingModel?.toLowerCase().includes(val.toLowerCase()) ||
-        managerNames.includes(val.toLowerCase())
+        managerNames.includes(val.toLowerCase()) ||
+        deliveryHeadNames.includes(val.toLowerCase())
       );
     });
     setProjectDetails(filtered);
@@ -666,8 +723,15 @@ const Projects = (props: IProps): JSX.Element => {
               ></Column>
               <Column
                 sortable
+                field="ProjectManager"
+                header="Project manager"
+                body={renderDeliveryHeadsColumn}
+              ></Column>
+              <Column
+                sortable
                 field="ProjectStatus"
                 header="Project status"
+                body={(rowData) => renderStatus(rowData)}
               ></Column>
               <Column
                 sortable
@@ -680,31 +744,44 @@ const Projects = (props: IProps): JSX.Element => {
                 body={(rowData: IProjectData) => {
                   return (
                     <div className={styles.Actions}>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedData(rowData);
-                          setFormMode("edit");
-                          setCurrentPage("form");
-                        }}
-                      >
-                        <img title="Edit" src={EditImage} alt="no image"></img>
-                      </div>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsDelModal({
-                            Id: rowData?.ID,
-                            isOpen: true,
-                          });
-                        }}
-                      >
-                        <img
-                          title="Delete"
-                          src={DeleteImage}
-                          alt="no image"
-                        ></img>
-                      </div>
+                      {PMOusers?.some(
+                        (user) =>
+                          user?.email?.toLowerCase() ===
+                          props?.loginUserEmail?.toLowerCase()
+                      ) && (
+                        <>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedData(rowData);
+                              setFormMode("edit");
+                              setCurrentPage("form");
+                            }}
+                          >
+                            <img
+                              title="Edit"
+                              src={EditImage}
+                              alt="no image"
+                            ></img>
+                          </div>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDelModal({
+                                Id: rowData?.ID,
+                                isOpen: true,
+                              });
+                            }}
+                          >
+                            <img
+                              title="Delete"
+                              src={DeleteImage}
+                              alt="no image"
+                            ></img>
+                          </div>
+                        </>
+                      )}
+
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
@@ -718,25 +795,24 @@ const Projects = (props: IProps): JSX.Element => {
                           alt="no image"
                         ></img>
                       </div>
-                      {rowData?.ProjectStatus === "Rejected" && (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsCmtsLoader(true);
-                            setIsCommentsModal({
-                              isOpen: true,
-                              Id: rowData?.ID,
-                            });
-                            getAllRejectComments(rowData?.ID);
-                          }}
-                        >
-                          <img
-                            title="Reject Comments"
-                            src={commentsImage}
-                            alt="no image"
-                          ></img>
-                        </div>
-                      )}
+
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCmtsLoader(true);
+                          setIsCommentsModal({
+                            isOpen: true,
+                            Id: rowData?.ID,
+                          });
+                          getAllRejectComments(rowData?.ID);
+                        }}
+                      >
+                        <img
+                          title="Reject Comments"
+                          src={commentsImage}
+                          alt="no image"
+                        ></img>
+                      </div>
                     </div>
                   );
                 }}
@@ -825,7 +901,7 @@ const Projects = (props: IProps): JSX.Element => {
           <div
             style={{
               width: "100%",
-              height: "60vh",
+              height: "30vh",
               display: "flex",
               alignItems: "center",
             }}
