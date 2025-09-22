@@ -305,6 +305,9 @@ h4 {
   width: 26px;
   height: 20px;
 }
+.p-datatable .p-datatable-tbody > tr {
+  cursor: pointer;
+}
 
 /* Drop Down */
 .drpDown .p-dropdown {
@@ -717,4 +720,15 @@ h4 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
+}
+
+.ms-BasePicker-text {
+  border: 1px solid #00a99d !important;
+  border-radius: 6px;
+}
+
+.ms-BasePicker-text::after {
+  box-shadow: 0 0 5px 0px rgb(0 169 157);
+  border: 1px solid #00a99d;
+  border-radius: 6px;
 }

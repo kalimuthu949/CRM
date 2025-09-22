@@ -29,14 +29,14 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
-  console.log(props, "billings props");
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
-  const BillingModel: string = props?.data?.BillingModel || props?.BillingModel;
+  const BillingModel: string = props?.BillingModel;
+  console.log(BillingModel, "BillingModel");
   const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
   const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
   const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
-  const BackImage: string = require("../../../../ExternalRef/Images/back.png");
+  // const BackImage: string = require("../../../../ExternalRef/Images/back.png");
   const invoiceImage: string = require("../../../../ExternalRef/Images/invoice.png");
 
   //Local States:
@@ -253,7 +253,7 @@ const Billings = (props: any) => {
                   New Milestone
                 </div>
               </div>
-              <div className={styles.btnAndText}>
+              {/* <div className={styles.btnAndText}>
                 <div
                   onClick={() => {
                     props?.goBack();
@@ -268,7 +268,7 @@ const Billings = (props: any) => {
                   />
                   Back
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
           <div

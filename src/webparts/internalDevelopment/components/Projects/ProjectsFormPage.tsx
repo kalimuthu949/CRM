@@ -13,7 +13,12 @@ import styles from "../Deals/DealsFormPage.module.scss";
 import selfComponentStyles from "./Projects.module.scss";
 import "../../../../ExternalRef/CSS/Style.css";
 import { useState } from "react";
-import { DatePicker, PrimaryButton } from "@fluentui/react";
+import {
+  DatePicker,
+  IPersonaProps,
+  NormalPeoplePicker,
+  PrimaryButton,
+} from "@fluentui/react";
 import { InputText } from "primereact/inputtext";
 import { Label } from "office-ui-fabric-react";
 import { Dropdown } from "primereact/dropdown";
@@ -46,7 +51,7 @@ const ProjectFormPage = (props: any) => {
   //Local States:
   const [leadOptions, setLeadOptions] = useState<IBasicDropDown[]>([]);
   const [formData, setFormData] = useState<any>({});
-  console.log(formData, "formData in projectsFormPage.tsx");
+  console.log(formData, "formData");
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -54,6 +59,7 @@ const ProjectFormPage = (props: any) => {
   const [deletedFiles, setDeletedFiles] = useState<any[]>([]);
   const [loader, setLoader] = useState<boolean>(false);
   const [billingsData, setBillingsData] = useState<any[]>([]);
+  const [billingsListData, setBillingsListData] = useState<any[]>([]);
   const [PMOusers, setPMOusers] = useState<IPeoplePickerDetails[]>([]);
   const [DHusers, setDHusers] = useState<IPeoplePickerDetails[]>([]);
   const [isApproval, setIsApproval] = useState<any>({
@@ -73,6 +79,7 @@ const ProjectFormPage = (props: any) => {
       StartDate: null,
       PlannedEndDate: null,
       ProjectManager: [],
+      DeliveryHead: [],
       ProjectStatus: "",
       BillingModel: "",
       BillingContactName: "",
@@ -105,7 +112,7 @@ const ProjectFormPage = (props: any) => {
         },
       ],
     })
-      .then((res: any[]) => {
+      .then(async (res: any[]) => {
         const leads: IBasicDropDown[] = res.map((item) => ({
           id: item.ID,
           name: item.FirstName,
@@ -113,6 +120,7 @@ const ProjectFormPage = (props: any) => {
         setLeadOptions(leads);
         getPMOGroupUsers();
         getDHGroupMembers();
+        getBillingsListDetails();
       })
       .catch((err) => {
         console.error("Error fetching CRMLeads:", err);
@@ -161,14 +169,89 @@ const ProjectFormPage = (props: any) => {
       });
   };
 
+  //Get Billings List Details:
+  const getBillingsListDetails = () => {
+    if (props?.isEdit && props?.data?.ID) {
+      SPServices.SPReadItems({
+        Listname: Config.ListNames.CRMBillings,
+        Select: "*",
+        Orderby: "Modified",
+        Orderbydecorasc: true,
+        Filter: [
+          {
+            FilterKey: "IsDelete",
+            Operator: "eq",
+            FilterValue: "false",
+          },
+          {
+            FilterKey: "ProjectId",
+            Operator: "eq",
+            FilterValue: props?.data?.ID,
+          },
+        ],
+      })
+        .then(async (res: any[]) => {
+          setBillingsListData(res);
+        })
+        .catch((err) => {
+          console.error("Error fetching CRMBillings:", err);
+        });
+    }
+  };
+
+  // When binding to PeoplePicker convert into PersonaProps
+  const onFilterChanged = (filterText: string): IPersonaProps[] => {
+    let filtered = DHusers;
+    if (filterText) {
+      filtered = DHusers.filter(
+        (u) =>
+          u.name.toLowerCase().includes(filterText.toLowerCase()) ||
+          u.email.toLowerCase().includes(filterText.toLowerCase())
+      );
+    }
+    return filtered.map((u) => ({
+      key: u.id,
+      text: u.name,
+      secondaryText: u.email,
+    }));
+  };
+
+  // Convert saved value to PersonaProps
+  const mapToPersona = (user: any): IPersonaProps => ({
+    key: user.id,
+    text: user.name,
+    secondaryText: user.email,
+  });
+
   //Set default user in peoplepicker:
-  const getSelectedEmails = (selectedUsers: IPeoplePickerDetails[]) => {
+  // const getSelectedEmails = (selectedUsers: IPeoplePickerDetails[]) => {
+  //   console.log(selectedUsers, "selectedUsers");
+  //   let selectedEmails: string[] = [];
+  //   if (selectedUsers?.length) {
+  //     selectedUsers?.forEach((user: IPeoplePickerDetails) => {
+  //       selectedEmails.push(user?.email);
+  //     });
+  //   }
+  //   return selectedEmails;
+  // };
+  const getSelectedEmails = (
+    selectedUsers: IPeoplePickerDetails[],
+    fallbackUsers: any[]
+  ) => {
     let selectedEmails: string[] = [];
     if (selectedUsers?.length) {
-      selectedUsers?.forEach((user: IPeoplePickerDetails) => {
+      selectedUsers.forEach((user: IPeoplePickerDetails) => {
         selectedEmails.push(user?.email);
       });
+    } else if (fallbackUsers?.length) {
+      // formData?.ProjectManager case (secondaryText contains email)
+      fallbackUsers.forEach((user: any) => {
+        if (user?.secondaryText) {
+          selectedEmails.push(user.secondaryText);
+        }
+      });
     }
+
     return selectedEmails;
   };
 
@@ -184,6 +267,49 @@ const ProjectFormPage = (props: any) => {
       [field]: !isValidField(field, value),
     }));
   };
+
+  // const handleOnChange = (field: string, value: any) => {
+  //   console.log(value, "value");
+  //   if (field === "PlannedEndDate" && formData?.StartDate) {
+  //     const start = new Date(formData?.StartDate);
+  //     const end = new Date(value);
+
+  //     if (end < start) {
+  //       props.Notify(
+  //         "info",
+  //         "Info",
+  //         "Planned End Date cannot be earlier than Start Date!"
+  //       );
+  //       setFormData((prev) => ({ ...prev, PlannedEndDate: null }));
+  //       return;
+  //     }
+  //   }
+
+  //   if (field === "StartDate" && formData?.PlannedEndDate) {
+  //     const start = new Date(value);
+  //     const end = new Date(formData?.PlannedEndDate);
+
+  //     if (end < start) {
+  //       props.Notify(
+  //         "info",
+  //         "Info",
+  //         "Start Date cannot be later than Planned End Date!"
+  //       );
+  //       setFormData((prev) => ({ ...prev, StartDate: null }));
+  //       return;
+  //     }
+  //   }
+
+  //   setFormData((prevData: any) => ({
+  //     ...prevData,
+  //     [field]: value,
+  //   }));
+
+  //   setErrorMessage((prevErrors) => ({
+  //     ...prevErrors,
+  //     [field]: !isValidField(field, value),
+  //   }));
+  // };
 
   //RowData is once comming then data set to the state:
   React.useEffect(() => {
@@ -244,6 +370,9 @@ const ProjectFormPage = (props: any) => {
       case "ProjectManager":
         return value && value.length > 0;
 
+      case "DeliveryHead":
+        return value && value.length > 0;
+
       case "Lead":
         return value && typeof value === "object" && value.name?.trim() !== "";
 
@@ -271,6 +400,8 @@ const ProjectFormPage = (props: any) => {
 
     if (!isValidField("ProjectManager", formData?.ProjectManager))
       errors.ProjectManager = true;
+    if (!isValidField("DeliveryHead", formData?.DeliveryHead))
+      errors.DeliveryHead = true;
     if (!isValidField("Lead", formData?.Lead)) errors.Lead = true;
     if (!isValidField("AccountName", formData?.AccountName))
       errors.AccountName = true;
@@ -293,6 +424,18 @@ const ProjectFormPage = (props: any) => {
     if (!isValidField("BillingAddress", formData?.BillingAddress))
       errors.BillingAddress = true;
     if (!isValidField("Remarks", formData?.Remarks)) errors.Remarks = true;
+    if (formData?.StartDate && formData?.PlannedEndDate) {
+      const start = formData.StartDate;
+      const end = formData.PlannedEndDate;
+      if (end < start) {
+        props.Notify(
+          "error",
+          "Validation Error",
+          "Planned End Date cannot be later than Start Date!"
+        );
+        errors.PlannedEndDate = true;
+      }
+    }
 
     setErrorMessage(errors);
 
@@ -309,6 +452,11 @@ const ProjectFormPage = (props: any) => {
     )
       .map((user: IPeoplePickerDetails) => user.id)
       .sort((a, b) => a - b);
+    let DeliveryHeadIds: number[] = JSON.parse(
+      JSON.stringify(formData?.DeliveryHead)
+    )
+      .map((user: any) => (user.id ? user?.id : user?.key))
+      .sort((a, b) => a - b);
 
     let json: any = {
       ProjectID: formData?.ProjectID,
@@ -318,6 +466,7 @@ const ProjectFormPage = (props: any) => {
       StartDate: SPServices.GetDateFormat(formData?.StartDate),
       PlannedEndDate: SPServices.GetDateFormat(formData?.PlannedEndDate),
       ProjectManagerId: { results: ProjectManagerIds },
+      DeliveryHeadId: { results: DeliveryHeadIds },
       ProjectStatus: formData?.ProjectStatus,
       BillingModel: formData?.BillingModel,
       BillingContactName: formData?.BillingContactName,
@@ -380,7 +529,7 @@ const ProjectFormPage = (props: any) => {
       PMOusers?.some(
         (user) =>
           user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-      )
+      ) && formData?.ProjectStatus === "Initiated"
         ? ""
         : emptyDatas();
       setIsApproval({
@@ -407,7 +556,7 @@ const ProjectFormPage = (props: any) => {
       ProjectStatus: "Initiated",
     };
     SPServices.SPUpdateItem({
-      ID: formData?.ProjectStatus == "Rejected" ? formData?.ID : isApproval?.id,
+      ID: formData?.ID ? formData?.ID : isApproval?.id,
       Listname: Config.ListNames.CRMProjects,
       RequestJSON:
         formData?.ProjectStatus == "Rejected" ? reSubmitObj : currObj,
@@ -673,7 +822,16 @@ const ProjectFormPage = (props: any) => {
         RequestJSON: json,
       })
         .then(() => {
-          handleStatusUpdate("Rejected");
+          if (
+            formData?.ProjectManager?.some(
+              (user: IPeoplePickerDetails) =>
+                user?.email === props?.loginUserEmail
+            )
+          ) {
+            handleStatusUpdate("Rejected");
+          } else {
+            handleDHUsersStatusUpdate("Rejected");
+          }
           setRejectReason("");
           setShowRejectDialog(false);
         })
@@ -696,6 +854,14 @@ const ProjectFormPage = (props: any) => {
       formData?.ProjectStatus === "Rejected" &&
       (formData?.IsApproved === false || props?.isAdd));
 
+  //Check formdata full data is not empty:
+  const isFormValid = Object.values(formData).every(
+    (value) =>
+      value !== "" &&
+      value !== null &&
+      !(Array.isArray(value) && value.length === 0)
+  );
+
   //Initial Render:
   React.useEffect(() => {
     getLeads();
@@ -708,6 +874,7 @@ const ProjectFormPage = (props: any) => {
         StartDate: null,
         PlannedEndDate: null,
         ProjectManager: [],
+        DeliveryHead: [],
         ProjectStatus: "Initiated",
         BillingModel: "",
         BillingContactName: "",
@@ -815,7 +982,9 @@ const ProjectFormPage = (props: any) => {
                         }
                       : DatePickerStyles
                   }
-                  onSelectDate={(date) => handleOnChange("StartDate", date)}
+                  onSelectDate={(date) => {
+                    handleOnChange("StartDate", date);
+                  }}
                   disabled={props?.isView}
                 />
               </div>
@@ -908,9 +1077,9 @@ const ProjectFormPage = (props: any) => {
                         }
                       : DatePickerStyles
                   }
-                  onSelectDate={(date) =>
-                    handleOnChange("PlannedEndDate", date)
-                  }
+                  onSelectDate={(date) => {
+                    handleOnChange("PlannedEndDate", date);
+                  }}
                   disabled={props?.isView}
                 />
               </div>
@@ -929,8 +1098,12 @@ const ProjectFormPage = (props: any) => {
                     placeholder="Select the Person"
                     personSelectionLimit={1}
                     context={ConfigureationData.context}
+                    // defaultSelectedUsers={getSelectedEmails(
+                    //   props?.data?.ProjectManager
+                    // )}
                     defaultSelectedUsers={getSelectedEmails(
-                      props?.data?.ProjectManager
+                      props?.data?.ProjectManager,
+                      formData?.ProjectManager
                     )}
                     webAbsoluteUrl={
                       ConfigureationData.context._pageContext._web.absoluteUrl
@@ -977,7 +1150,11 @@ const ProjectFormPage = (props: any) => {
                   onChange={(e) =>
                     handleOnChange("BillingModel", e?.value?.name)
                   }
-                  disabled={props?.isView}
+                  disabled={
+                    props?.isView ||
+                    billingsData?.length > 0 ||
+                    billingsListData?.length > 0
+                  }
                   style={
                     errorMessage["BillingModel"]
                       ? { border: "2px solid #ff0000", borderRadius: "4px" }
@@ -1016,6 +1193,79 @@ const ProjectFormPage = (props: any) => {
                       : undefined
                   }
                 />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Delivery head</Label>
+                <div
+                  className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
+                >
+                  {/* <PeoplePicker
+                    styles={
+                      errorMessage["DeliveryHead"]
+                        ? peopleErrorPickerStyles
+                        : peoplePickerStyles
+                    }
+                    ensureUser
+                    placeholder="Select the Person"
+                    personSelectionLimit={1}
+                    context={ConfigureationData.context}
+                    defaultSelectedUsers={getSelectedEmails(
+                      props?.data?.DeliveryHead,
+                      formData?.DeliveryHead
+                    )}
+                    webAbsoluteUrl={
+                      ConfigureationData.context._pageContext._web.absoluteUrl
+                    }
+                    resolveDelay={100}
+                    onChange={(items: any[]) =>
+                      handleOnChange("DeliveryHead", items)
+                    }
+                    disabled={props?.isView}
+                  /> */}
+                  <NormalPeoplePicker
+                    styles={{
+                      root: {
+                        border: errorMessage["DeliveryHead"]
+                          ? "2px solid #ff0000"
+                          : "1px solid #d9d9d9",
+                        borderRadius: "6px",
+                      },
+                    }}
+                    onResolveSuggestions={onFilterChanged}
+                    pickerSuggestionsProps={{
+                      suggestionsHeaderText: "DH Group Members",
+                      noResultsFoundText: "No DH member found",
+                    }}
+                    itemLimit={1}
+                    selectedItems={
+                      formData?.DeliveryHead
+                        ? formData?.DeliveryHead.map((u: any) =>
+                            mapToPersona(u)
+                          )
+                        : []
+                    }
+                    onChange={(items: IPersonaProps[]) => {
+                      const mapped = items.map((i) => ({
+                        id: i.key,
+                        name: i.text,
+                        email: i.secondaryText,
+                      }));
+                      setFormData({
+                        ...formData,
+                        DeliveryHead: mapped,
+                      });
+
+                      // Clear error if user selected a value
+                      if (mapped.length > 0) {
+                        setErrorMessage((prev: any) => ({
+                          ...prev,
+                          DeliveryHead: "",
+                        }));
+                      }
+                    }}
+                    disabled={props?.isView}
+                  />
+                </div>
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
                 <Label>BillingAddress</Label>
@@ -1065,7 +1315,7 @@ const ProjectFormPage = (props: any) => {
           <div className={styles.addUpdateBtns}>
             {(formData?.ProjectStatus == "Initiated" &&
               isApproval?.boolean == false) ||
-            (props?.isEdit && isApproval?.boolean == false) ||
+            props?.isEdit ||
             props?.isView ? (
               <PrimaryButton
                 className={styles.cancelBtn}
@@ -1081,65 +1331,27 @@ const ProjectFormPage = (props: any) => {
               ""
             )}
 
-            {props?.isView == false && isApproval?.boolean == false && (
-              <PrimaryButton
-                className={styles.updateBtn}
-                iconProps={{ iconName: "Save" }}
-                onClick={() => {
-                  Validation();
-                }}
-              >
-                {props?.isEdit ? "Update" : "Save"}
-              </PrimaryButton>
-            )}
+            {props?.isView == false &&
+              (props?.isAdd ? isApproval?.boolean == false : true) && (
+                <PrimaryButton
+                  className={styles.updateBtn}
+                  iconProps={{ iconName: "Save" }}
+                  onClick={() => {
+                    Validation();
+                  }}
+                >
+                  {props?.isEdit ? "Update" : "Save"}
+                </PrimaryButton>
+              )}
 
-            {/* {(PMOusers?.some(
-              (user) =>
-                user?.email?.toLowerCase() ===
-                props?.loginUserEmail?.toLowerCase()
-            ) &&
-              formData?.ProjectStatus == "Initiated" &&
-              (formData?.IsApproved == false || props?.isAdd)) ||
-            (PMOusers?.some(
-              (user) =>
-                user?.email?.toLowerCase() ===
-                props?.loginUserEmail?.toLowerCase()
-            ) &&
-              formData?.ProjectStatus == "Rejected" &&
-              formData?.IsApproved == false) ||
-            props?.isAdd ? (
-              <PrimaryButton
-                onClick={() => {
-                  if (
-                    (isApproval?.boolean &&
-                      formData?.ProjectStatus == "Initiated") ||
-                    (formData?.ProjectStatus == "Rejected" && props?.isEdit)
-                  ) {
-                    handleApprovalFunc();
-                  } else {
-                    props.Notify(
-                      "info",
-                      "Info",
-                      "Please fill the all data first, then click again to send approval"
-                    );
-                  }
-                }}
-                style={{ borderRadius: "5px" }}
-              >
-                {formData?.ProjectStatus == "Rejected"
-                  ? "Resubmit"
-                  : "Send approval"}
-              </PrimaryButton>
-            ) : (
-              ""
-            )} */}
             {canShowApprovalButton && (
               <PrimaryButton
                 onClick={() => {
                   const canApprove =
                     (isApproval?.boolean &&
                       formData?.ProjectStatus === "Initiated") ||
-                    (formData?.ProjectStatus === "Rejected" && props?.isEdit);
+                    (formData?.ProjectStatus === "Rejected" && props?.isEdit) ||
+                    isFormValid;
 
                   if (canApprove) {
                     handleApprovalFunc();
@@ -1147,7 +1359,7 @@ const ProjectFormPage = (props: any) => {
                     props.Notify(
                       "info",
                       "Info",
-                      "Please fill all the data first, then click again to send approval"
+                      "Please fill all the data and save first, then click again to send approval"
                     );
                   }
                 }}
@@ -1158,7 +1370,7 @@ const ProjectFormPage = (props: any) => {
                   : "Send approval"}
               </PrimaryButton>
             )}
-            {props?.isEdit &&
+            {props?.isView &&
               formData?.IsApproved &&
               formData?.ProjectManager?.some(
                 (pm: IPeoplePickerDetails) =>
@@ -1183,8 +1395,8 @@ const ProjectFormPage = (props: any) => {
                 </>
               )}
             {/*...................This buttons only DH Approvers.............................*/}
-            {props?.isEdit &&
-              DHusers?.some(
+            {props?.isView &&
+              formData?.DeliveryHead?.some(
                 (user) =>
                   user?.email?.toLowerCase() ===
                   props?.loginUserEmail?.toLowerCase()
@@ -1202,7 +1414,7 @@ const ProjectFormPage = (props: any) => {
                     Approve
                   </PrimaryButton>
                   <PrimaryButton
-                    onClick={() => handleDHUsersStatusUpdate("Rejected")}
+                    onClick={() => setShowRejectDialog(true)}
                     className={styles.cancelBtn}
                   >
                     Reject
