@@ -48,10 +48,10 @@ const ProjectFormPage = (props: any) => {
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
   );
+
   //Local States:
   const [leadOptions, setLeadOptions] = useState<IBasicDropDown[]>([]);
   const [formData, setFormData] = useState<any>({});
-  console.log(formData, "formData");
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -224,16 +224,6 @@ const ProjectFormPage = (props: any) => {
   });
 
   //Set default user in peoplepicker:
-  // const getSelectedEmails = (selectedUsers: IPeoplePickerDetails[]) => {
-  //   console.log(selectedUsers, "selectedUsers");
-  //   let selectedEmails: string[] = [];
-  //   if (selectedUsers?.length) {
-  //     selectedUsers?.forEach((user: IPeoplePickerDetails) => {
-  //       selectedEmails.push(user?.email);
-  //     });
-  //   }
-  //   return selectedEmails;
-  // };
   const getSelectedEmails = (
     selectedUsers: IPeoplePickerDetails[],
     fallbackUsers: any[]
@@ -267,49 +257,6 @@ const ProjectFormPage = (props: any) => {
       [field]: !isValidField(field, value),
     }));
   };
-
-  // const handleOnChange = (field: string, value: any) => {
-  //   console.log(value, "value");
-  //   if (field === "PlannedEndDate" && formData?.StartDate) {
-  //     const start = new Date(formData?.StartDate);
-  //     const end = new Date(value);
-
-  //     if (end < start) {
-  //       props.Notify(
-  //         "info",
-  //         "Info",
-  //         "Planned End Date cannot be earlier than Start Date!"
-  //       );
-  //       setFormData((prev) => ({ ...prev, PlannedEndDate: null }));
-  //       return;
-  //     }
-  //   }
-
-  //   if (field === "StartDate" && formData?.PlannedEndDate) {
-  //     const start = new Date(value);
-  //     const end = new Date(formData?.PlannedEndDate);
-
-  //     if (end < start) {
-  //       props.Notify(
-  //         "info",
-  //         "Info",
-  //         "Start Date cannot be later than Planned End Date!"
-  //       );
-  //       setFormData((prev) => ({ ...prev, StartDate: null }));
-  //       return;
-  //     }
-  //   }
-
-  //   setFormData((prevData: any) => ({
-  //     ...prevData,
-  //     [field]: value,
-  //   }));
-
-  //   setErrorMessage((prevErrors) => ({
-  //     ...prevErrors,
-  //     [field]: !isValidField(field, value),
-  //   }));
-  // };
 
   //RowData is once comming then data set to the state:
   React.useEffect(() => {
@@ -467,7 +414,11 @@ const ProjectFormPage = (props: any) => {
       PlannedEndDate: SPServices.GetDateFormat(formData?.PlannedEndDate),
       ProjectManagerId: { results: ProjectManagerIds },
       DeliveryHeadId: { results: DeliveryHeadIds },
-      ProjectStatus: formData?.ProjectStatus,
+      ProjectStatus:
+        formData?.ProjectStatus == "0"
+          ? "1"
+          : Config.projectStatusReverseMap[formData?.ProjectStatus] ||
+            formData?.ProjectStatus,
       BillingModel: formData?.BillingModel,
       BillingContactName: formData?.BillingContactName,
       BillingContactEmail: formData?.BillingContactEmail,
@@ -526,12 +477,7 @@ const ProjectFormPage = (props: any) => {
 
       props.Notify("success", "Success", "Details updated successfully");
       setLoader(false);
-      PMOusers?.some(
-        (user) =>
-          user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-      ) && formData?.ProjectStatus === "Initiated"
-        ? ""
-        : emptyDatas();
+      emptyDatas();
       setIsApproval({
         boolean: true,
         id: formData?.ID,
@@ -548,18 +494,12 @@ const ProjectFormPage = (props: any) => {
   //handle approval process:
   const handleApprovalFunc = () => {
     const currObj = {
-      IsApproved: true,
-      ProjectStatus: "PendingWithPM",
-    };
-    const reSubmitObj = {
-      IsApproved: true,
-      ProjectStatus: "Initiated",
+      ProjectStatus: "2",
     };
     SPServices.SPUpdateItem({
       ID: formData?.ID ? formData?.ID : isApproval?.id,
       Listname: Config.ListNames.CRMProjects,
-      RequestJSON:
-        formData?.ProjectStatus == "Rejected" ? reSubmitObj : currObj,
+      RequestJSON: currObj,
     })
       .then(() => {
         props.Notify("success", "Success", "Approval sent successfully");
@@ -656,12 +596,7 @@ const ProjectFormPage = (props: any) => {
       });
       sessionStorage.removeItem("billingsData");
       setLoader(false);
-      PMOusers?.some(
-        (user) =>
-          user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-      )
-        ? ""
-        : emptyDatas();
+      emptyDatas();
     } catch (err) {
       console.log(
         err,
@@ -700,43 +635,16 @@ const ProjectFormPage = (props: any) => {
 
   //Project manager status updated funtions :
   const handleStatusUpdate = (status: string) => {
-    const approveObj = {
-      IsApproved: false,
-      ProjectStatus: status,
-      IsProjectManager: true,
-    };
-    const rejectObj = {
-      IsApproved: false,
+    const currentJson = {
       ProjectStatus: status,
     };
     SPServices.SPUpdateItem({
       Listname: Config.ListNames.CRMProjects,
       ID: formData?.ID,
-      RequestJSON: status == "Pending" ? approveObj : rejectObj,
+      RequestJSON: currentJson,
     })
       .then(() => {
-        props.Notify("success", "Success", `Project ${status} successfully`);
-        emptyDatas();
-      })
-      .catch((err) => {
-        console.error(`Error updating project to ${status}:`, err);
-      });
-  };
-
-  //DH status updated functions:
-  const handleDHUsersStatusUpdate = (status: string) => {
-    const CurrentObj = {
-      ProjectStatus: status,
-      IsProjectManager: false,
-    };
-
-    SPServices.SPUpdateItem({
-      Listname: Config.ListNames.CRMProjects,
-      ID: formData?.ID,
-      RequestJSON: CurrentObj,
-    })
-      .then(() => {
-        props.Notify("success", "Success", `Project ${status} successfully`);
+        props.Notify("success", "Success", `Details added successfully`);
         emptyDatas();
       })
       .catch((err) => {
@@ -822,15 +730,10 @@ const ProjectFormPage = (props: any) => {
         RequestJSON: json,
       })
         .then(() => {
-          if (
-            formData?.ProjectManager?.some(
-              (user: IPeoplePickerDetails) =>
-                user?.email === props?.loginUserEmail
-            )
-          ) {
-            handleStatusUpdate("Rejected");
+          if (isProjectManager) {
+            handleStatusUpdate("4");
           } else {
-            handleDHUsersStatusUpdate("Rejected");
+            handleStatusUpdate("5");
           }
           setRejectReason("");
           setShowRejectDialog(false);
@@ -841,25 +744,20 @@ const ProjectFormPage = (props: any) => {
     }
   };
 
-  //Check current user is PMO user or not and send approval button show and hide logics:
+  //Check user is PMO,Project Manager and Delivery Head:
   const isPMOUser = PMOusers?.some(
     (user) =>
       user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
   );
-  const canShowApprovalButton =
-    (isPMOUser &&
-      formData?.ProjectStatus === "Initiated" &&
-      (formData?.IsApproved === false || props?.isAdd)) ||
-    (isPMOUser &&
-      formData?.ProjectStatus === "Rejected" &&
-      (formData?.IsApproved === false || props?.isAdd));
 
-  //Check formdata full data is not empty:
-  const isFormValid = Object.values(formData).every(
-    (value) =>
-      value !== "" &&
-      value !== null &&
-      !(Array.isArray(value) && value.length === 0)
+  const isProjectManager = formData?.ProjectManager?.some(
+    (pm: IPeoplePickerDetails) =>
+      pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+  );
+
+  const isDeliveryHead = formData?.DeliveryHead?.some(
+    (user: IPeoplePickerDetails) =>
+      user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
   );
 
   //Initial Render:
@@ -875,7 +773,7 @@ const ProjectFormPage = (props: any) => {
         PlannedEndDate: null,
         ProjectManager: [],
         DeliveryHead: [],
-        ProjectStatus: "Initiated",
+        ProjectStatus: "0",
         BillingModel: "",
         BillingContactName: "",
         BillingContactEmail: "",
@@ -925,7 +823,7 @@ const ProjectFormPage = (props: any) => {
                   options={leadOptions}
                   optionLabel="name"
                   onChange={(e) => handleOnChange("Lead", e.value)}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   style={
                     errorMessage["Lead"]
                       ? { border: "2px solid #ff0000" }
@@ -940,7 +838,7 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("AccountName", e.target.value)
                   }
                   value={formData?.AccountName}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   style={
                     errorMessage["AccountName"]
                       ? { border: "2px solid #ff0000" }
@@ -955,7 +853,7 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("ProjectName", e.target.value)
                   }
                   value={formData?.ProjectName}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   style={
                     errorMessage["ProjectName"]
                       ? { border: "2px solid #ff0000" }
@@ -985,31 +883,35 @@ const ProjectFormPage = (props: any) => {
                   onSelectDate={(date) => {
                     handleOnChange("StartDate", date);
                   }}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                 />
               </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Attachment</Label>
-                {!props?.isView ? (
-                  <FileUpload
-                    className="addFileButton"
-                    name="demo[]"
-                    mode="basic"
-                    onSelect={(e) =>
-                      handleFileSelection(e, files, setFiles, Config)
-                    }
-                    url="/api/upload"
-                    auto
-                    multiple
-                    maxFileSize={1000000}
-                    style={{ width: "14%" }}
-                    chooseLabel="Browse"
-                    chooseOptions={{ icon: "pi pi-upload" }}
-                  />
-                ) : (
-                  ""
-                )}
-              </div>
+              {isPMOUser ? (
+                <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                  <Label>Attachment</Label>
+                  {!props?.isView ? (
+                    <FileUpload
+                      className="addFileButton"
+                      name="demo[]"
+                      mode="basic"
+                      onSelect={(e) =>
+                        handleFileSelection(e, files, setFiles, Config)
+                      }
+                      url="/api/upload"
+                      auto
+                      multiple
+                      maxFileSize={1000000}
+                      style={{ width: "14%" }}
+                      chooseLabel="Browse"
+                      chooseOptions={{ icon: "pi pi-upload" }}
+                    />
+                  ) : (
+                    ""
+                  )}
+                </div>
+              ) : (
+                ""
+              )}
               {files.length > 0 && (
                 <ul className="fileContainer">
                   {files.map((file: any, index) => (
@@ -1050,7 +952,7 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingContactName", e.target.value)
                   }
                   value={formData?.BillingContactName}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   style={
                     errorMessage["BillingContactName"]
                       ? { border: "2px solid #ff0000" }
@@ -1080,7 +982,7 @@ const ProjectFormPage = (props: any) => {
                   onSelectDate={(date) => {
                     handleOnChange("PlannedEndDate", date);
                   }}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
@@ -1112,7 +1014,9 @@ const ProjectFormPage = (props: any) => {
                     onChange={(items: any[]) =>
                       handleOnChange("ProjectManager", items)
                     }
-                    disabled={props?.isView}
+                    disabled={
+                      props?.isView || isProjectManager || isDeliveryHead
+                    }
                   />
                 </div>
               </div>
@@ -1124,7 +1028,10 @@ const ProjectFormPage = (props: any) => {
                   }
                   optionLabel="name"
                   value={props?.initialCRMProjectsListDropContainer?.projectStaus.find(
-                    (item) => item.name === formData?.ProjectStatus
+                    (item) =>
+                      item.name ===
+                      (Config.projectStatusMap[formData?.ProjectStatus] ||
+                        formData?.ProjectStatus)
                   )}
                   onChange={(e) =>
                     handleOnChange("ProjectStatus", e?.value?.name)
@@ -1153,7 +1060,9 @@ const ProjectFormPage = (props: any) => {
                   disabled={
                     props?.isView ||
                     billingsData?.length > 0 ||
-                    billingsListData?.length > 0
+                    billingsListData?.length > 0 ||
+                    isProjectManager ||
+                    isDeliveryHead
                   }
                   style={
                     errorMessage["BillingModel"]
@@ -1171,7 +1080,7 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingContactEmail", e.target.value)
                   }
                   value={formData?.BillingContactEmail}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   style={
                     errorMessage["BillingContactEmail"]
                       ? { border: "2px solid #ff0000" }
@@ -1186,7 +1095,7 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingContactMobile", e.target.value)
                   }
                   value={formData?.BillingContactMobile}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   style={
                     errorMessage["BillingContactMobile"]
                       ? { border: "2px solid #ff0000" }
@@ -1199,29 +1108,6 @@ const ProjectFormPage = (props: any) => {
                 <div
                   className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
                 >
-                  {/* <PeoplePicker
-                    styles={
-                      errorMessage["DeliveryHead"]
-                        ? peopleErrorPickerStyles
-                        : peoplePickerStyles
-                    }
-                    ensureUser
-                    placeholder="Select the Person"
-                    personSelectionLimit={1}
-                    context={ConfigureationData.context}
-                    defaultSelectedUsers={getSelectedEmails(
-                      props?.data?.DeliveryHead,
-                      formData?.DeliveryHead
-                    )}
-                    webAbsoluteUrl={
-                      ConfigureationData.context._pageContext._web.absoluteUrl
-                    }
-                    resolveDelay={100}
-                    onChange={(items: any[]) =>
-                      handleOnChange("DeliveryHead", items)
-                    }
-                    disabled={props?.isView}
-                  /> */}
                   <NormalPeoplePicker
                     styles={{
                       root: {
@@ -1263,7 +1149,9 @@ const ProjectFormPage = (props: any) => {
                         }));
                       }
                     }}
-                    disabled={props?.isView}
+                    disabled={
+                      props?.isView || isProjectManager || isDeliveryHead
+                    }
                   />
                 </div>
               </div>
@@ -1274,7 +1162,7 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingAddress", e.target.value)
                   }
                   value={formData?.BillingAddress}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   maxLength={500}
                   style={
                     errorMessage["BillingAddress"]
@@ -1288,7 +1176,7 @@ const ProjectFormPage = (props: any) => {
                 <InputTextarea
                   onChange={(e) => handleOnChange("Remarks", e.target.value)}
                   value={formData?.Remarks}
-                  disabled={props?.isView}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
                   maxLength={500}
                   style={
                     errorMessage["Remarks"]
@@ -1301,10 +1189,14 @@ const ProjectFormPage = (props: any) => {
           </div>
           {formData.BillingModel && (
             <Billings
+              ProjectsFormData={formData}
               loginUserEmail={props?.loginUserEmail}
               getBillingsAddDetails={getBillingsAddDetails}
               isAdd={props?.isAdd}
+              isView={props?.isView}
+              isEdit={props?.isEdit}
               BillingModel={formData?.BillingModel}
+              isDeliveryHead={isDeliveryHead}
               data={props?.data}
               goBack={props?.goBack}
               spfxContext={props.spfxContext}
@@ -1313,101 +1205,58 @@ const ProjectFormPage = (props: any) => {
             />
           )}
           <div className={styles.addUpdateBtns}>
-            {(formData?.ProjectStatus == "Initiated" &&
-              isApproval?.boolean == false) ||
-            props?.isEdit ||
-            props?.isView ? (
+            <PrimaryButton
+              className={styles.cancelBtn}
+              iconProps={{ iconName: "cancel" }}
+              onClick={() => {
+                emptyDatas();
+                sessionStorage.removeItem("billingsData");
+              }}
+            >
+              Cancel
+            </PrimaryButton>
+            {props?.isView == false && isPMOUser ? (
               <PrimaryButton
-                className={styles.cancelBtn}
-                iconProps={{ iconName: "cancel" }}
+                className={styles.updateBtn}
+                iconProps={{ iconName: "Save" }}
                 onClick={() => {
-                  emptyDatas();
-                  sessionStorage.removeItem("billingsData");
+                  Validation();
                 }}
               >
-                Cancel
+                {props?.isEdit ? "Update" : "Save"}
               </PrimaryButton>
             ) : (
               ""
             )}
 
-            {props?.isView == false &&
-              (props?.isAdd ? isApproval?.boolean == false : true) && (
+            {(formData?.ProjectStatus == "1" ||
+              formData?.ProjectStatus === "4" ||
+              formData?.ProjectStatus === "5") &&
+              isPMOUser &&
+              props?.isEdit && (
                 <PrimaryButton
-                  className={styles.updateBtn}
-                  iconProps={{ iconName: "Save" }}
                   onClick={() => {
-                    Validation();
+                    handleApprovalFunc();
                   }}
+                  style={{ borderRadius: "5px" }}
                 >
-                  {props?.isEdit ? "Update" : "Save"}
+                  {formData?.ProjectStatus === "4" ||
+                  formData?.ProjectStatus === "5"
+                    ? "Resubmit"
+                    : "Send approval"}
                 </PrimaryButton>
               )}
-
-            {canShowApprovalButton && (
-              <PrimaryButton
-                onClick={() => {
-                  const canApprove =
-                    (isApproval?.boolean &&
-                      formData?.ProjectStatus === "Initiated") ||
-                    (formData?.ProjectStatus === "Rejected" && props?.isEdit) ||
-                    isFormValid;
-
-                  if (canApprove) {
-                    handleApprovalFunc();
-                  } else {
-                    props.Notify(
-                      "info",
-                      "Info",
-                      "Please fill all the data and save first, then click again to send approval"
-                    );
-                  }
-                }}
-                style={{ borderRadius: "5px" }}
-              >
-                {formData?.ProjectStatus === "Rejected"
-                  ? "Resubmit"
-                  : "Send approval"}
-              </PrimaryButton>
-            )}
-            {props?.isView &&
-              formData?.IsApproved &&
-              formData?.ProjectManager?.some(
-                (pm: IPeoplePickerDetails) =>
-                  pm?.email?.toLowerCase() ===
-                  props?.loginUserEmail?.toLowerCase()
-              ) &&
-              formData?.ProjectStatus !== "Approved" &&
-              formData?.ProjectStatus !== "Rejected" && (
-                <>
-                  <PrimaryButton
-                    onClick={() => handleStatusUpdate("Pending")}
-                    style={{ borderRadius: "5px" }}
-                  >
-                    Approve
-                  </PrimaryButton>
-                  <PrimaryButton
-                    onClick={() => setShowRejectDialog(true)}
-                    className={styles.cancelBtn}
-                  >
-                    Reject
-                  </PrimaryButton>
-                </>
-              )}
-            {/*...................This buttons only DH Approvers.............................*/}
-            {props?.isView &&
-              formData?.DeliveryHead?.some(
-                (user) =>
-                  user?.email?.toLowerCase() ===
-                  props?.loginUserEmail?.toLowerCase()
-              ) &&
-              formData?.IsProjectManager &&
-              formData?.IsApproved == false &&
-              formData?.ProjectStatus == "Pending" && (
+            {((isProjectManager && formData?.ProjectStatus == "2") ||
+              (isDeliveryHead && formData?.ProjectStatus == "3")) &&
+              props?.isEdit && (
                 <>
                   <PrimaryButton
                     onClick={() => {
-                      handleDHUsersStatusUpdate("Approved");
+                      if (isProjectManager) {
+                        handleStatusUpdate("3");
+                      } else {
+                        handleStatusUpdate("6");
+                      }
                     }}
                     style={{ borderRadius: "5px" }}
                   >

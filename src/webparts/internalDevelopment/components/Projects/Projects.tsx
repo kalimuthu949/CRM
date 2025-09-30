@@ -57,8 +57,6 @@ const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
 const commentsImage: string = require("../../../../ExternalRef/Images/comment.png");
 const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
 const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
-const BillingImage: string = require("../../../../ExternalRef/Images/bill.png");
-console.log(BillingImage);
 const VersionHistoryImage: string = require("../../../../ExternalRef/Images/versionHistory.png");
 const FilterImage: string = require("../../../../ExternalRef/Images/filter.png");
 const FilterNoneImage: string = require("../../../../ExternalRef/Images/filternone.png");
@@ -81,6 +79,7 @@ const Projects = (props: IProps): JSX.Element => {
   const [selectedData, setSelectedData] = React.useState<IProjectData | null>(
     null
   );
+  const [billingsDetails, setBillingDetails] = React.useState<any>([]);
   const [formMode, setFormMode] = React.useState<"add" | "edit" | "view">(
     "add"
   );
@@ -110,9 +109,7 @@ const Projects = (props: IProps): JSX.Element => {
   const [isCommentsModal, setIsCommentsModal] = React.useState<IDelModal>({
     ...Config.initialModal,
   });
-  console.log(rejectComments, "rejectComments");
   const [isCmtsLoader, setIsCmtsLoader] = React.useState(false);
-  console.log(isCmtsLoader, "isCmtsLoader");
 
   //Get Project Details:
   const getProjectDetails = () => {
@@ -167,8 +164,6 @@ const Projects = (props: IProps): JSX.Element => {
             DeliveryHead: _DeliveryHead ? _DeliveryHead : [],
             ProjectStatus: items?.ProjectStatus,
             BillingModel: items?.BillingModel,
-            IsApproved: items?.IsApproved,
-            IsProjectManager: items?.IsProjectManager,
             BillingContactName: items?.BillingContactName,
             BillingContactEmail: items?.BillingContactEmail,
             BillingContactMobile: items?.BillingContactMobile,
@@ -183,6 +178,31 @@ const Projects = (props: IProps): JSX.Element => {
       .catch((err) => {
         console.log(err, "getProjectDetails Error in Projects.tsx component");
       });
+  };
+
+  //get Billings List Details:
+  const getBillingsListDetails = async () => {
+    const res = await SPServices.SPReadItems({
+      Listname: Config.ListNames.CRMBillings,
+      Select: "*,Project/Id",
+      Expand: "Project",
+      Orderby: "Modified",
+      Orderbydecorasc: true,
+      Filter: [
+        {
+          FilterKey: "IsDelete",
+          Operator: "eq",
+          FilterValue: "false",
+        },
+      ],
+    });
+
+    let BillingDetails: any[] = res.map((items: any) => ({
+      ProjectId: items?.Project?.Id,
+      Status: items?.Status,
+    }));
+
+    setBillingDetails(BillingDetails);
   };
 
   //Get Group Members:
@@ -217,7 +237,7 @@ const Projects = (props: IProps): JSX.Element => {
         if (res?.Choices?.length) {
           res?.Choices?.forEach((val: any) => {
             tempProjectStatus.push({
-              name: val,
+              name: Config.projectStatusMap[val] || val,
             });
           });
         }
@@ -248,6 +268,7 @@ const Projects = (props: IProps): JSX.Element => {
             );
             setLoader(false);
             getPMOGroupUsers();
+            getBillingsListDetails();
           })
           .catch((err) => {
             console.log(err, "Get choice error from CRMProjects list");
@@ -324,10 +345,12 @@ const Projects = (props: IProps): JSX.Element => {
 
   //Render Status:
   const renderStatus = (rowData: any) => {
-    if (rowData?.ProjectStatus === "Pending") {
-      return "PendingWithDH";
-    }
-    return rowData?.ProjectStatus;
+    return (
+      <div>
+        {Config.projectStatusMap[rowData?.ProjectStatus] ||
+          rowData?.ProjectStatus}
+      </div>
+    );
   };
 
   //handle all filters:
@@ -390,7 +413,6 @@ const Projects = (props: IProps): JSX.Element => {
 
   //Global Search functionalities:
   const searchProjectDetails = (val: string) => {
-    console.log(val, "searchVal");
     setSearchVal(val);
     if (!val) {
       applyFilters();
@@ -513,6 +535,35 @@ const Projects = (props: IProps): JSX.Element => {
     );
   };
 
+  //only edit options shows conditions:
+  const isEditable = (rowData: IProjectData) => {
+    return (
+      PMOusers?.some(
+        (user) =>
+          user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase() &&
+          (rowData?.ProjectStatus == "0" ||
+            rowData?.ProjectStatus == "4" ||
+            rowData?.ProjectStatus == "5" ||
+            rowData?.ProjectStatus == "1")
+      ) ||
+      (rowData?.ProjectManager?.some(
+        (pm: IPeoplePickerDetails) =>
+          pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+      ) &&
+        (rowData?.ProjectStatus == "2" ||
+          (rowData?.ProjectStatus == "6" &&
+            billingsDetails?.some(
+              (bill: any) =>
+                bill?.ProjectId === rowData?.ID && bill?.Status == "0"
+            )))) ||
+      (rowData?.DeliveryHead?.some(
+        (pm: IPeoplePickerDetails) =>
+          pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+      ) &&
+        rowData?.ProjectStatus == "3")
+    );
+  };
+
   //ChangeLog Cancel function:
   const handleClose = () => {
     setIsChangeLogOpen(false);
@@ -544,6 +595,30 @@ const Projects = (props: IProps): JSX.Element => {
               <h2>Projects</h2>
             </div>
             <div className={styles.filterBtns}>
+              <div>
+                <PrimaryButton
+                  styles={RefreshButton}
+                  style={{
+                    width: "25px",
+                    minWidth: "0px",
+                    height: "30px",
+                    minHeight: "0px",
+                  }}
+                  iconProps={{ iconName: "refresh" }}
+                  className={styles.refresh}
+                  onClick={() => {
+                    setSearchVal("");
+                    setFilterValues({
+                      ProjectID: "",
+                      Lead: "",
+                      AccountName: "",
+                      ProjectStatus: "",
+                      BillingModel: "",
+                    });
+                    getProjectDetails();
+                  }}
+                />
+              </div>
               <div className="all_search">
                 <IconField iconPosition="left">
                   <InputIcon className="pi pi-search"> </InputIcon>
@@ -567,24 +642,30 @@ const Projects = (props: IProps): JSX.Element => {
                   Filter
                 </div>
               </div>
-              <div className={styles.btnAndText}>
-                <div
-                  onClick={() => {
-                    setSelectedData(null);
-                    setFormMode("add");
-                    setCurrentPage("form");
-                    sessionStorage.removeItem("billingsData");
-                  }}
-                  className={styles.btnBackGround}
-                >
-                  <img
-                    src={PlusImage}
-                    alt="no image"
-                    style={{ width: "15px", height: "15px" }}
-                  />
-                  New Project
+              {PMOusers?.some(
+                (user) =>
+                  user?.email?.toLowerCase() ===
+                  props?.loginUserEmail?.toLowerCase()
+              ) && (
+                <div className={styles.btnAndText}>
+                  <div
+                    onClick={() => {
+                      setSelectedData(null);
+                      setFormMode("add");
+                      setCurrentPage("form");
+                      sessionStorage.removeItem("billingsData");
+                    }}
+                    className={styles.btnBackGround}
+                  >
+                    <img
+                      src={PlusImage}
+                      alt="no image"
+                      style={{ width: "15px", height: "15px" }}
+                    />
+                    New Project
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           {filterBar ? (
@@ -674,9 +755,18 @@ const Projects = (props: IProps): JSX.Element => {
               value={projectDetails}
               paginator={projectDetails && projectDetails?.length > 8}
               rows={8}
+              // onRowClick={(e: any) => {
+              //   setSelectedData(e.data);
+              //   setFormMode("view");
+              //   setCurrentPage("form");
+              // }}
               onRowClick={(e: any) => {
                 setSelectedData(e.data);
-                setFormMode("view");
+                if (isEditable(e.data)) {
+                  setFormMode("edit");
+                } else {
+                  setFormMode("view");
+                }
                 setCurrentPage("form");
               }}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
@@ -723,8 +813,8 @@ const Projects = (props: IProps): JSX.Element => {
               ></Column>
               <Column
                 sortable
-                field="ProjectManager"
-                header="Project manager"
+                field="DeliveryHead"
+                header="Delivery Head"
                 body={renderDeliveryHeadsColumn}
               ></Column>
               <Column
@@ -744,11 +834,33 @@ const Projects = (props: IProps): JSX.Element => {
                 body={(rowData: IProjectData) => {
                   return (
                     <div className={styles.Actions}>
-                      {PMOusers?.some(
+                      {/* {PMOusers?.some(
                         (user) =>
                           user?.email?.toLowerCase() ===
+                            props?.loginUserEmail?.toLowerCase() &&
+                          (rowData?.ProjectStatus == "0" ||
+                            rowData?.ProjectStatus == "4" ||
+                            rowData?.ProjectStatus == "5" ||
+                            rowData?.ProjectStatus == "1")
+                      ) ||
+                      (rowData?.ProjectManager?.some(
+                        (pm: IPeoplePickerDetails) =>
+                          pm?.email?.toLowerCase() ===
                           props?.loginUserEmail?.toLowerCase()
-                      ) && (
+                      ) &&
+                        (rowData?.ProjectStatus == "2" ||
+                          (rowData?.ProjectStatus == "6" &&
+                            billingsDetails?.some(
+                              (bill: any) =>
+                                bill?.ProjectId === rowData?.ID &&
+                                bill?.Status == "0"
+                            )))) ||
+                      (rowData?.DeliveryHead?.some(
+                        (pm: IPeoplePickerDetails) =>
+                          pm?.email?.toLowerCase() ===
+                          props?.loginUserEmail?.toLowerCase()
+                      ) &&
+                        rowData?.ProjectStatus == "3") ? (
                         <>
                           <div
                             onClick={(e) => {
@@ -780,6 +892,36 @@ const Projects = (props: IProps): JSX.Element => {
                             ></img>
                           </div>
                         </>
+                      ) : (
+                        ""
+                      )} */}
+                      {isEditable(rowData) ? (
+                        <>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedData(rowData);
+                              setFormMode("edit");
+                              setCurrentPage("form");
+                            }}
+                          >
+                            <img title="Edit" src={EditImage} alt="no image" />
+                          </div>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDelModal({ Id: rowData?.ID, isOpen: true });
+                            }}
+                          >
+                            <img
+                              title="Delete"
+                              src={DeleteImage}
+                              alt="no image"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        ""
                       )}
 
                       <div
@@ -845,6 +987,7 @@ const Projects = (props: IProps): JSX.Element => {
         <Billings
           data={selectedData}
           goBack={() => setCurrentPage("list")}
+          goProjectFormPage={() => setCurrentPage("form")}
           spfxContext={props.spfxContext}
           Notify={props.Notify}
         />

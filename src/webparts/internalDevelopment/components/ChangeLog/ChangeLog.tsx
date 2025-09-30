@@ -14,6 +14,7 @@ import moment from "moment";
 import "../../../../ExternalRef/CSS/Style.css";
 import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
+import { Config } from "../../../../ExternalRef/CommonServices/Config";
 
 //ChangeLog Interface
 interface IVersionColums {
@@ -356,9 +357,17 @@ const ChangeLog = ({
                                   <p
                                     style={{ margin: 0 }}
                                     className="rightSideSection"
-                                    title={row?.value?.toString()}
+                                    title={
+                                      row?.name === "Project Status"
+                                        ? Config.projectStatusMap[row?.value] ||
+                                          row?.value
+                                        : row?.value?.toString()
+                                    }
                                   >
-                                    {row?.value?.toString()}
+                                    {row?.name === "Project Status"
+                                      ? Config.projectStatusMap[row?.value] ||
+                                        row?.value
+                                      : row?.value?.toString()}
                                   </p>
                                 </div>
                               );
