@@ -28,6 +28,7 @@ import { Dropdown } from "primereact/dropdown";
 import { InputTextarea } from "primereact/inputtextarea";
 
 const BillingsForm = (props: any) => {
+  console.log(props?.ProjectsFormData, "selectedProjectsData");
   //Local States:
   const [
     initialCRMBillingsListDropContainer,
@@ -35,7 +36,12 @@ const BillingsForm = (props: any) => {
   ] = useState<ICRMBillingsListDrop>({
     ...Config.CRMBillingsDropDown,
   });
+  console.log(
+    initialCRMBillingsListDropContainer,
+    "initialCRMBillingsListDropContainer"
+  );
   const [formData, setFormData] = useState<any>({});
+  console.log(formData, "formData");
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -53,7 +59,7 @@ const BillingsForm = (props: any) => {
         if (res?.Choices?.length) {
           res?.Choices?.forEach((val: any) => {
             tempStatus.push({
-              name: val,
+              name: Config.statusLabelMap[val] || val,
             });
           });
         }
@@ -194,6 +200,26 @@ const BillingsForm = (props: any) => {
     if (!isValidField("ReminderDaysBeforeDue", formData?.ReminderDaysBeforeDue))
       errors.ReminderDaysBeforeDue = true;
 
+    // DueDate should be between Project StartDate and PlannedEndDate
+    if (
+      formData?.DueDate &&
+      props?.ProjectsFormData?.StartDate &&
+      props?.ProjectsFormData?.PlannedEndDate
+    ) {
+      const dueDate = new Date(formData?.DueDate);
+      const startDate = new Date(props.ProjectsFormData?.StartDate);
+      const endDate = new Date(props.ProjectsFormData?.PlannedEndDate);
+
+      if (dueDate < startDate || dueDate > endDate) {
+        props.Notify(
+          "error",
+          "Validation Error",
+          "Due Date must be between Project Start Date and Planned End Date!"
+        );
+        errors.DueDate = true;
+      }
+    }
+
     // Billing model specific fields
     if (billingModel === "Milestone") {
       if (!isValidField("MileStoneName", formData?.MileStoneName))
@@ -257,7 +283,9 @@ const BillingsForm = (props: any) => {
       StartMonth: formData?.StartMonth
         ? SPServices.GetDateFormat(formData?.StartMonth)
         : null,
-      Status: formData?.Status ? formData?.Status : "",
+      Status: formData?.Status
+        ? Config.statusReverseMap[formData?.Status] || formData?.Status
+        : "",
     };
     if (props?.isEdit) {
       handleUpdate(json);
@@ -355,7 +383,7 @@ const BillingsForm = (props: any) => {
         ReminderDaysBeforeDue: 7,
         ResourceType: "",
         StartMonth: null,
-        Status: "Planned",
+        Status: "Not generated invoice",
       });
     }
   }, []);
@@ -428,11 +456,13 @@ const BillingsForm = (props: any) => {
               disabled={props?.isView}
             />
           </div>
-          <div className={`${projectFormStyles.allField} dealFormPage`}>
+          {/* <div className={`${projectFormStyles.allField} dealFormPage`}>
             <Label>Status</Label>
             <Dropdown
               value={initialCRMBillingsListDropContainer?.Status.find(
-                (item) => item.name === formData?.Status
+                (item) =>
+                  item.name ===
+                  (Config.statusLabelMap[formData?.Status] || formData?.Status)
               )}
               onChange={(e) => handleOnChange("Status", e?.value?.name)}
               options={initialCRMBillingsListDropContainer?.Status}
@@ -443,10 +473,9 @@ const BillingsForm = (props: any) => {
                   ? { border: "2px solid #ff0000", borderRadius: "4px" }
                   : undefined
               }
-              // disabled={props?.isView}
               disabled
             />
-          </div>
+          </div> */}
           <div className={`${projectFormStyles.allField} dealFormPage`}>
             <Label>Reminder days before due</Label>
             <InputText

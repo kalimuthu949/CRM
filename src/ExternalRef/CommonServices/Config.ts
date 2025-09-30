@@ -85,6 +85,48 @@ export namespace Config {
     Hours: "",
     ProjectId: 0,
   };
+
+  //Billings status configurations:
+  export const statusLabelMap: { [key: string]: string } = {
+    "0": "Not generated invoice",
+    "1": "Invoice raised",
+    "2": "Invoice generated to Zoho",
+    "3": "Paid",
+    "4": "Over due",
+    "5": "Void",
+    "6": "Cancelled",
+  };
+
+  export const statusReverseMap: { [key: string]: string } = {
+    "Not generated invoice": "0",
+    "Invoice raised": "1",
+    "Invoice generated to Zoho": "2",
+    Paid: "3",
+    "Over due": "4",
+    Void: "5",
+    Cancelled: "6",
+  };
+
+  //Projects Status configurations:
+  export const projectStatusMap: { [key: string]: string } = {
+    "0": "Draft",
+    "1": "ProjectUpdatedByPMO",
+    "2": "PendingWithPM",
+    "3": "PendingwithDH",
+    "4": "RejectedByPM",
+    "5": "RejectedByDH",
+    "6": "Approved",
+  };
+
+  export const projectStatusReverseMap: { [key: string]: string } = {
+    Draft: "0",
+    ProjectUpdatedByPMO: "1",
+    PendingWithPM: "2",
+    PendingwithDH: "3",
+    RejectedByPM: "4",
+    RejectedByDH: "5",
+    Approved: "6",
+  };
 }
 
 //Refresh button Common Styles:

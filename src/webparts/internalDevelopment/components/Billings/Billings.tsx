@@ -29,10 +29,10 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
+  console.log(props, "props in Billings.tsx component");
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
   const BillingModel: string = props?.BillingModel;
-  console.log(BillingModel, "BillingModel");
   const PlusImage: string = require("../../../../ExternalRef/Images/plus.png");
   const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
   const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
@@ -159,6 +159,29 @@ const Billings = (props: any) => {
     }
   };
 
+  //Render status column with proper label
+  const renderStatus = (rowData: IBillingsDetails) => {
+    return (
+      <div>{Config.statusLabelMap[rowData?.Status] || rowData?.Status}</div>
+    );
+  };
+
+  //Function to check whether to show invoice icon or not:
+  const shouldShowInvoiceIcon = (
+    dueDateStr: string,
+    reminderDays: string
+  ): boolean => {
+    if (!dueDateStr) return false;
+
+    const today = new Date();
+    const dueDate = new Date(dueDateStr);
+    const startDate = new Date(dueDate);
+
+    startDate.setDate(dueDate.getDate() - parseInt(reminderDays));
+
+    return today >= startDate && today <= dueDate;
+  };
+
   //Handle Invoice Trigger function:
   const handleInvoiceTrigger = (Id: number) => {
     SPServices.SPUpdateItem({
@@ -166,12 +189,12 @@ const Billings = (props: any) => {
       ID: Id,
       RequestJSON: {
         InvoiceTrigger: true,
-        Status: "Due",
+        Status: "1",
       },
     })
       .then(() => {
         props?.Notify("success", "Success", "Invoice Triggered successfully");
-        props?.goBack();
+        getBillingsListDetails();
       })
       .catch((err: any) => {
         console.log(err, "Invoice trigger error in Billings.tsx component");
@@ -208,6 +231,11 @@ const Billings = (props: any) => {
     }
   };
 
+  //Check whether the row is editable or not:
+  const isBillingRowEditable = (rowData: IBillingsDetails) => {
+    return props?.ProjectsFormData?.ProjectStatus !== "6";
+  };
+
   //Initial Render:
   React.useEffect(() => {
     setLoader(true);
@@ -240,19 +268,25 @@ const Billings = (props: any) => {
                   />
                 </IconField>
               </div>
-              <div className={styles.btnAndText}>
-                <div
-                  onClick={() => openForm("add")}
-                  className={styles.btnBackGround}
-                >
-                  <img
-                    src={PlusImage}
-                    alt="no image"
-                    style={{ width: "15px", height: "15px" }}
-                  />
-                  New Milestone
+              {!props?.isView &&
+              !props?.isDeliveryHead &&
+              props?.data?.ProjectStatus !== "6" ? (
+                <div className={styles.btnAndText}>
+                  <div
+                    onClick={() => openForm("add")}
+                    className={styles.btnBackGround}
+                  >
+                    <img
+                      src={PlusImage}
+                      alt="no image"
+                      style={{ width: "15px", height: "15px" }}
+                    />
+                    New Milestone
+                  </div>
                 </div>
-              </div>
+              ) : (
+                ""
+              )}
               {/* <div className={styles.btnAndText}>
                 <div
                   onClick={() => {
@@ -283,8 +317,19 @@ const Billings = (props: any) => {
               value={billingsDetails}
               paginator={billingsDetails && billingsDetails?.length > 8}
               rows={8}
+              // onRowClick={(e: any) => {
+              //   openForm("view", e?.data);
+              // }}
               onRowClick={(e: any) => {
-                openForm("view", e?.data);
+                if (
+                  !props?.isView &&
+                  !props?.isDeliveryHead &&
+                  isBillingRowEditable(e.data)
+                ) {
+                  openForm("edit", e?.data);
+                } else {
+                  openForm("view", e?.data);
+                }
               }}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
@@ -298,7 +343,12 @@ const Billings = (props: any) => {
                   );
                 }}
               ></Column>
-              <Column sortable field="Status" header="Status"></Column>
+              <Column
+                sortable
+                field="Status"
+                header="Status"
+                body={renderStatus}
+              ></Column>
               <Column
                 sortable
                 field="ReminderDaysBeforeDue"
@@ -374,40 +424,54 @@ const Billings = (props: any) => {
                   }}
                 ></Column>
               )}
-              <Column
-                field="Action"
-                header="Actions"
-                body={(rowData: IBillingsDetails) => {
-                  return (
-                    <div className={styles.Actions}>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openForm("edit", rowData);
-                        }}
-                      >
-                        <img title="Edit" src={EditImage} alt="no image"></img>
-                      </div>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsDelModal({
-                            Id: rowData?.ID,
-                            isOpen: true,
-                          });
-                        }}
-                      >
-                        <img
-                          title="Delete"
-                          src={DeleteImage}
-                          alt="no image"
-                        ></img>
-                      </div>
-                      {props?.data?.ProjectStatus == "Approved" &&
-                        props?.data?.ProjectManager?.some(
-                          (user: any) => user?.email == props?.loginUserEmail
-                        ) &&
-                        rowData?.Status == "Planned" && (
+              {!props?.isView && !props?.isDeliveryHead && (
+                <Column
+                  field="Action"
+                  header="Actions"
+                  body={(rowData: IBillingsDetails) => {
+                    return (
+                      <div className={styles.Actions}>
+                        {props?.ProjectsFormData?.ProjectStatus !== "6" && (
+                          <>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openForm("edit", rowData);
+                              }}
+                            >
+                              <img
+                                title="Edit"
+                                src={EditImage}
+                                alt="no image"
+                              ></img>
+                            </div>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDelModal({
+                                  Id: rowData?.ID,
+                                  isOpen: true,
+                                });
+                              }}
+                            >
+                              <img
+                                title="Delete"
+                                src={DeleteImage}
+                                alt="no image"
+                              ></img>
+                            </div>
+                          </>
+                        )}
+                        {(props?.data?.ProjectStatus == "6" &&
+                          props?.data?.ProjectManager?.some(
+                            (user: any) => user?.email == props?.loginUserEmail
+                          ) &&
+                          rowData?.Status == "0" &&
+                          shouldShowInvoiceIcon(
+                            rowData?.DueDate,
+                            rowData?.ReminderDaysBeforeDue
+                          )) ||
+                        rowData?.Status == "4" ? (
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
@@ -420,11 +484,14 @@ const Billings = (props: any) => {
                               alt="no image"
                             />
                           </div>
+                        ) : (
+                          ""
                         )}
-                    </div>
-                  );
-                }}
-              ></Column>
+                      </div>
+                    );
+                  }}
+                ></Column>
+              )}
             </DataTable>
           </div>
         </div>
@@ -438,6 +505,7 @@ const Billings = (props: any) => {
         onHide={() => setIsFormModalOpen(false)}
       >
         <BillingsForm
+          ProjectsFormData={props?.ProjectsFormData}
           getBillingsAddDetails={props?.getBillingsAddDetails}
           projectsFormAdd={props?.isAdd}
           getBillingFormDetails={getBillingFormDetails}

@@ -19,8 +19,6 @@ export interface IProjectData {
   DeliveryHead: IPeoplePickerDetails[];
   ProjectStatus: string;
   BillingModel: string;
-  IsApproved: boolean;
-  IsProjectManager: boolean;
   BillingContactName: string;
   BillingContactEmail: string;
   BillingContactMobile: string;
