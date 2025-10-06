@@ -317,9 +317,6 @@ const Billings = (props: any) => {
               value={billingsDetails}
               paginator={billingsDetails && billingsDetails?.length > 8}
               rows={8}
-              // onRowClick={(e: any) => {
-              //   openForm("view", e?.data);
-              // }}
               onRowClick={(e: any) => {
                 if (
                   !props?.isView &&

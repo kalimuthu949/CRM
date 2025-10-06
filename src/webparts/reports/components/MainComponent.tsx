@@ -34,12 +34,15 @@ import { InputIcon } from "primereact/inputicon";
 import { InputText } from "primereact/inputtext";
 import { PrimaryButton } from "@fluentui/react";
 import { Dropdown } from "primereact/dropdown";
+import FileSaver from "file-saver";
+import * as Excel from "exceljs/dist/exceljs.min.js";
 
 const MainComponent = (props: any) => {
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
   const FilterImage: string = require("../../../ExternalRef/Images/filter.png");
   const FilterNoneImage: string = require("../../../ExternalRef/Images/filternone.png");
+  const ImportUploadImage: string = require("../../../ExternalRef/Images/fileupload.png");
 
   //Local states:
   const [
@@ -177,7 +180,7 @@ const MainComponent = (props: any) => {
         if (res?.Choices?.length) {
           res?.Choices?.forEach((val: any) => {
             tempStatus.push({
-              name: val,
+              name: Config.statusLabelMap[val] || val,
             });
           });
         }
@@ -228,6 +231,13 @@ const MainComponent = (props: any) => {
     );
   };
 
+  //Render status column function:
+  const renderStatus = (rowData: any) => {
+    return (
+      <div>{Config.statusLabelMap[rowData?.Status] || rowData?.Status}</div>
+    );
+  };
+
   //handle all filters:
   const handleFilterChange = (field: string, value: string) => {
     setFilterValues((prev) => ({
@@ -262,6 +272,96 @@ const MainComponent = (props: any) => {
     setReportData(filtered);
   };
 
+  // Export Project & Billing Reports Excel
+  const generateExcel = (items): void => {
+    const workbook: any = new Excel.Workbook();
+    const worksheet: any = workbook.addWorksheet("Project & Billing Report");
+
+    worksheet.columns = [
+      { header: "Project ID", key: "ProjectID", width: 20 },
+      { header: "Project Name", key: "ProjectName", width: 30 },
+      { header: "Account Name", key: "AccountName", width: 25 },
+      { header: "Lead", key: "Lead", width: 20 },
+      { header: "Project Manager", key: "ProjectManager", width: 35 },
+      { header: "Start Date", key: "StartDate", width: 20 },
+      { header: "Planned End Date", key: "PlannedEndDate", width: 20 },
+      { header: "Milestone", key: "BillingMileStone", width: 25 },
+      { header: "Due Date", key: "DueDate", width: 20 },
+      { header: "Currency", key: "Currency", width: 15 },
+      { header: "Amount", key: "Amount", width: 15 },
+      { header: "Status", key: "Status", width: 20 },
+      { header: "Reminder (Days)", key: "ReminderDaysBeforeDue", width: 20 },
+    ];
+
+    items.forEach((item) => {
+      const projectManagers =
+        item?.ProjectManager?.map((pm) => pm?.name).join(", ") || "-";
+
+      const row = worksheet.addRow({
+        ProjectID: item.ProjectID || "-",
+        ProjectName: item.ProjectName || "-",
+        AccountName: item.AccountName || "-",
+        Lead: item.Lead || "-",
+        ProjectManager: projectManagers,
+        StartDate: item.StartDate
+          ? moment(item.StartDate).format("DD/MM/YYYY")
+          : "-",
+        PlannedEndDate: item.PlannedEndDate
+          ? moment(item.PlannedEndDate).format("DD/MM/YYYY")
+          : "-",
+        BillingMileStone: item.BillingMileStone || "-",
+        DueDate: item.DueDate ? moment(item.DueDate).format("DD/MM/YYYY") : "-",
+        Currency: item.Currency || "-",
+        Amount: item.Amount || "-",
+        Status: Config.statusLabelMap[item.Status] || item.Status || "-",
+        ReminderDaysBeforeDue: item.ReminderDaysBeforeDue || "-",
+      });
+
+      // Add borders and alignment for each cell
+      row.eachCell((cell: any) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { horizontal: "left" };
+      });
+    });
+
+    // Header style
+    worksheet.getRow(1).eachCell((cell: any) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "00a99d" },
+      };
+      cell.font = { bold: true, color: { argb: "FFFFFF" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // File name with timestamp
+    const now = new Date();
+    const fileName = `Project_Billing_Report_${moment(now).format(
+      "DD_MM_YYYY_HH:mm"
+    )}.xlsx`;
+
+    workbook.xlsx
+      .writeBuffer()
+      .then((buffer: any) => {
+        FileSaver.saveAs(new Blob([buffer]), fileName);
+      })
+      .catch((err: any) => {
+        console.log("Error writing excel export", err);
+      });
+  };
+
   //apply filters in purticular columns:
   const applyFilters = () => {
     const filtered = masterReportData.filter((item: any) => {
@@ -278,7 +378,8 @@ const MainComponent = (props: any) => {
         filterValues.ProjectName.toLowerCase()
       );
       const matchStatus = filterValues.Status
-        ? item?.Status === filterValues.Status
+        ? (Config.statusLabelMap[item?.Status] || item?.Status) ===
+          filterValues.Status
         : true;
       const matchCurrency = filterValues.Currency
         ? item?.Currency === filterValues.Currency
@@ -343,6 +444,19 @@ const MainComponent = (props: any) => {
               />
             </IconField>
           </div>
+          <div className={styles.btnAndText}>
+            <div
+              className={styles.btnBackGround}
+              style={{ cursor: reportData.length ? "pointer" : "not-allowed" }}
+              onClick={() => {
+                if (reportData.length) generateExcel(reportData);
+              }}
+            >
+              <img src={ImportUploadImage} alt="no image" />
+              Export
+            </div>
+          </div>
+
           <div className={styles.btnAndText}>
             <div
               className={styles.btnBackGround}
@@ -412,7 +526,10 @@ const MainComponent = (props: any) => {
               optionLabel="name"
               placeholder="Select a status"
               value={initialCRMBillingsListDropContainer?.Status.find(
-                (item) => item.name === filterValues?.Status
+                (item) =>
+                  item.name ===
+                  (Config.statusLabelMap[filterValues?.Status] ||
+                    filterValues?.Status)
               )}
               onChange={(e) => handleFilterChange("Status", e.value?.name)}
             />
@@ -509,7 +626,12 @@ const MainComponent = (props: any) => {
           ></Column>
           <Column sortable field="Currency" header="Currency"></Column>
           <Column sortable field="Amount" header="Amount"></Column>
-          <Column sortable field="Status" header="Status"></Column>
+          <Column
+            sortable
+            field="Status"
+            header="Status"
+            body={renderStatus}
+          ></Column>
           <Column
             sortable
             field="ReminderDaysBeforeDue"
