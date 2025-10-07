@@ -148,9 +148,7 @@ const BillingsForm = (props: any) => {
     switch (field) {
       case "BillingFrequency":
       case "Currency":
-      case "MileStoneDescription":
       case "MileStoneName":
-      case "Notes":
       case "ResourceType":
       case "Status":
         return value && typeof value === "string" && value.trim() !== "";
@@ -194,7 +192,6 @@ const BillingsForm = (props: any) => {
     const billingModel = props?.BillingModel;
     // Common fields
     if (!isValidField("Currency", formData?.Currency)) errors.Currency = true;
-    if (!isValidField("Notes", formData?.Notes)) errors.Notes = true;
     if (!isValidField("DueDate", formData?.DueDate)) errors.DueDate = true;
     if (!isValidField("Status", formData?.Status)) errors.Status = true;
     if (!isValidField("ReminderDaysBeforeDue", formData?.ReminderDaysBeforeDue))
@@ -224,8 +221,6 @@ const BillingsForm = (props: any) => {
     if (billingModel === "Milestone") {
       if (!isValidField("MileStoneName", formData?.MileStoneName))
         errors.MileStoneName = true;
-      if (!isValidField("MileStoneDescription", formData?.MileStoneDescription))
-        errors.MileStoneDescription = true;
       if (!isValidField("Amount", formData?.Amount)) errors.Amount = true;
     }
 
@@ -427,11 +422,6 @@ const BillingsForm = (props: any) => {
               value={formData?.Notes}
               onChange={(e) => handleOnChange("Notes", e.target.value)}
               placeholder="Enter notes"
-              style={
-                errorMessage["Notes"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
               disabled={props?.isView}
             />
           </div>
@@ -515,19 +505,15 @@ const BillingsForm = (props: any) => {
                 />
               </div>
               <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Milestone description</Label>
+                <Label>Milestone Description</Label>
                 <InputTextarea
                   maxLength={500}
                   value={formData?.MileStoneDescription}
                   onChange={(e) =>
                     handleOnChange("MileStoneDescription", e.target.value)
                   }
-                  style={
-                    errorMessage["MileStoneDescription"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
                   disabled={props?.isView}
+                  autoResize
                 />
               </div>
               <div className={`${projectFormStyles.allField} dealFormPage`}>

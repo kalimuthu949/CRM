@@ -11,6 +11,7 @@
 import * as React from "react";
 import "../../../ExternalRef/CSS/Style.css";
 import SPServices from "../../../ExternalRef/CommonServices/SPServices";
+
 import {
   Config,
   RefreshButton,
@@ -36,6 +37,8 @@ import { PrimaryButton } from "@fluentui/react";
 import { Dropdown } from "primereact/dropdown";
 import FileSaver from "file-saver";
 import * as Excel from "exceljs/dist/exceljs.min.js";
+import MilestonesReports from "./UpComingMilestonesReports/MilestonesReports";
+import PMwiseInvoiceComplianceReport from "./PMwiseInvoiceComplianceReport/PMwiseInvoiceComplianceReport";
 
 const MainComponent = (props: any) => {
   //Local variables:
@@ -53,11 +56,10 @@ const MainComponent = (props: any) => {
   });
   const [searchVal, setSearchVal] = React.useState<string>("");
   const [filterBar, setFilterBar] = React.useState<boolean>(false);
-  console.log(
-    initialCRMBillingsListDropContainer,
-    "initialCRMBillingsListDropContainer"
-  );
   const [reportData, setReportData] = React.useState<any[]>([]);
+  console.log("reportData", reportData);
+  const [filteredData, setFilteredData] = React.useState<any[]>([]);
+
   const [masterReportData, setMasterReportData] = React.useState<any[]>([]);
   const [filterValues, setFilterValues] = React.useState({
     ProjectID: "",
@@ -67,6 +69,7 @@ const MainComponent = (props: any) => {
     Currency: "",
     ProjectName: "",
     ProjectManager: "",
+    InvoiceTrigger: "",
   });
 
   //Function to fetch Project and Billing data and combine them for report:
@@ -129,11 +132,15 @@ const MainComponent = (props: any) => {
               AccountName: project.AccountName,
               Lead: project.Lead?.FirstName,
               ProjectManager: _ProjectManager,
+              BillingModel: project.BillingModel,
               StartDate: project.StartDate,
               PlannedEndDate: project.PlannedEndDate,
+              Remarks: project.Remarks || "",
               BillingMileStone: billing.MileStoneName || "",
               DueDate: billing.DueDate,
               Amount: billing.Amount,
+              InvoiceTrigger: billing.InvoiceTrigger,
+              InvoiceID: billing.InvoiceID || "",
               Status: billing.Status,
               Currency: billing.Currency,
               ReminderDaysBeforeDue: billing.ReminderDaysBeforeDue || 7,
@@ -147,11 +154,15 @@ const MainComponent = (props: any) => {
             AccountName: project.AccountName,
             Lead: project.Lead?.FirstName,
             ProjectManager: _ProjectManager,
+            BillingModel: project.BillingModel,
             StartDate: project.StartDate,
             PlannedEndDate: project.PlannedEndDate,
+            Remarks: project.Remarks || "",
             BillingMileStone: "",
             DueDate: "",
             Amount: "",
+            InvoiceTrigger: "",
+            InvoiceID: "",
             Status: "",
             Currency: "",
             ReminderDaysBeforeDue: "",
@@ -231,10 +242,38 @@ const MainComponent = (props: any) => {
     );
   };
 
+  // Milestone Column Template
+  const milestoneTemplate = (rowData: any) => {
+    return (
+      <div className="MultilinedisplayText" title={rowData?.BillingMileStone}>
+        {rowData?.BillingMileStone || "-"}
+      </div>
+    );
+  };
+
+  // Invoice Trigger Column Template
+  const InvoiceTriggerTemplate = (rowData: any) => {
+    return <div>{rowData?.InvoiceTrigger ? "Yes" : "No"}</div>;
+  };
+
+  // Invoice ID Column Template
+  const InvoiceIDTemplate = (rowData: any) => {
+    return <div>{rowData?.InvoiceID || "-"}</div>;
+  };
+
   //Render status column function:
   const renderStatus = (rowData: any) => {
     return (
       <div>{Config.statusLabelMap[rowData?.Status] || rowData?.Status}</div>
+    );
+  };
+
+  // Remarks column template
+  const remarksTemplate = (rowData: any) => {
+    return (
+      <div className="MultilinedisplayText" title={rowData?.Remarks}>
+        {rowData?.Remarks || "-"}
+      </div>
     );
   };
 
@@ -249,12 +288,18 @@ const MainComponent = (props: any) => {
   //Global Search functionalities:
   const searchProjectAndBillingsDetails = (val: string) => {
     setSearchVal(val);
+
+    const sourceData =
+      filteredData.length || Object.values(filterValues).some((v) => v)
+        ? filteredData
+        : masterReportData;
+
     if (!val) {
-      applyFilters();
+      setReportData(sourceData);
       return;
     }
 
-    const filtered = masterReportData.filter((item) => {
+    const filtered = sourceData.filter((item) => {
       const managerNames =
         item?.ProjectManager?.map((pm: IPeoplePickerDetails) =>
           pm.name?.toLowerCase()
@@ -264,11 +309,18 @@ const MainComponent = (props: any) => {
         item.Lead?.toLowerCase().includes(val.toLowerCase()) ||
         item.AccountName?.toLowerCase().includes(val.toLowerCase()) ||
         item.ProjectName?.toLowerCase().includes(val.toLowerCase()) ||
-        item.Status?.toLowerCase().includes(val.toLowerCase()) ||
+        item.BillingModel?.toLowerCase().includes(val.toLowerCase()) ||
+        (Config.statusLabelMap[item?.Status] || item?.Status)
+          ?.toLowerCase()
+          .includes(val.toLowerCase()) ||
+        item?.InvoiceID?.toLowerCase().includes(val.toLowerCase()) ||
+        item?.Remarks?.toLowerCase().includes(val.toLowerCase()) ||
+        item?.Amount?.toString().toLowerCase().includes(val.toLowerCase()) ||
         item.Currency?.toLowerCase().includes(val.toLowerCase()) ||
         managerNames.includes(val.toLowerCase())
       );
     });
+
     setReportData(filtered);
   };
 
@@ -289,8 +341,11 @@ const MainComponent = (props: any) => {
       { header: "Due Date", key: "DueDate", width: 20 },
       { header: "Currency", key: "Currency", width: 15 },
       { header: "Amount", key: "Amount", width: 15 },
+      { header: "Billing Model", key: "BillingModel", width: 25 },
       { header: "Status", key: "Status", width: 20 },
-      { header: "Reminder (Days)", key: "ReminderDaysBeforeDue", width: 20 },
+      { header: "Invoice Raised ?", key: "InvoiceTrigger", width: 25 },
+      { header: "Invoice No", key: "InvoiceID", width: 20 },
+      { header: "Remarks", key: "Remarks", width: 30 },
     ];
 
     items.forEach((item) => {
@@ -313,8 +368,11 @@ const MainComponent = (props: any) => {
         DueDate: item.DueDate ? moment(item.DueDate).format("DD/MM/YYYY") : "-",
         Currency: item.Currency || "-",
         Amount: item.Amount || "-",
+        BillingModel: item.BillingModel || "-",
         Status: Config.statusLabelMap[item.Status] || item.Status || "-",
-        ReminderDaysBeforeDue: item.ReminderDaysBeforeDue || "-",
+        InvoiceTrigger: item.InvoiceTrigger ? "Yes" : "No",
+        InvoiceID: item.InvoiceID || "-",
+        Remarks: item.Remarks || "-",
       });
 
       // Add borders and alignment for each cell
@@ -365,6 +423,11 @@ const MainComponent = (props: any) => {
   //apply filters in purticular columns:
   const applyFilters = () => {
     const filtered = masterReportData.filter((item: any) => {
+      const managerNames =
+        item?.ProjectManager?.map((pm: IPeoplePickerDetails) =>
+          pm.name?.toLowerCase()
+        ).join(" ") || "";
+
       const matchProjectID = item?.ProjectID?.toLowerCase().includes(
         filterValues.ProjectID.toLowerCase()
       );
@@ -384,32 +447,65 @@ const MainComponent = (props: any) => {
       const matchCurrency = filterValues.Currency
         ? item?.Currency === filterValues.Currency
         : true;
-      const managerNames =
-        item?.ProjectManager?.map((pm: IPeoplePickerDetails) =>
-          pm.name?.toLowerCase()
-        ).join(" ") || "";
-
       const matchProjectManager = filterValues.ProjectManager
         ? managerNames.includes(filterValues.ProjectManager.toLowerCase())
         : true;
+      const matchInvoiceTrigger =
+        filterValues.InvoiceTrigger === "" ||
+        filterValues.InvoiceTrigger === null
+          ? true
+          : String(item?.InvoiceTrigger).toLowerCase() ===
+            String(filterValues.InvoiceTrigger).toLowerCase();
 
       return (
         matchProjectID &&
         matchLead &&
         matchAccount &&
+        matchProjectName &&
         matchStatus &&
         matchCurrency &&
-        matchProjectName &&
-        matchProjectManager
+        matchProjectManager &&
+        matchInvoiceTrigger
       );
     });
 
-    setReportData(filtered);
+    setFilteredData(filtered);
+
+    // maintain search chain
+    if (searchVal) {
+      const filteredSearch = filtered.filter((item) => {
+        const managerNames =
+          item?.ProjectManager?.map((pm: IPeoplePickerDetails) =>
+            pm.name?.toLowerCase()
+          ).join(" ") || "";
+        return (
+          item.ProjectID?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item.Lead?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item.AccountName?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item.ProjectName?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item.BillingModel?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          (Config.statusLabelMap[item?.Status] || item?.Status)
+            ?.toLowerCase()
+            .includes(searchVal.toLowerCase()) ||
+          item?.InvoiceID?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item?.Remarks?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item?.Amount?.toString()
+            .toLowerCase()
+            .includes(searchVal.toLowerCase()) ||
+          item.Currency?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          managerNames.includes(searchVal.toLowerCase())
+        );
+      });
+      setReportData(filteredSearch);
+    } else {
+      setReportData(filtered);
+    }
   };
+
   //Apply filters when filter values change:
   React.useEffect(() => {
     applyFilters();
-  }, [filterValues]);
+  }, [filterValues, searchVal]);
 
   //Initial data fetch:
   React.useEffect(() => {
@@ -417,229 +513,282 @@ const MainComponent = (props: any) => {
   }, []);
 
   return (
-    <div className={styles.lcaBody}>
-      <div
-        className={`${styles.filterBarAndTableBorder} 
+    <>
+      <div className={styles.lcaBody}>
+        <div
+          className={`${styles.filterBarAndTableBorder} 
                 ${
                   ScreenWidth >= 1536
                     ? styles.filterBar_1536
                     : styles.filterBar_1396
                 }
                 `}
-      >
-        <div className={styles.filterBar}>
-          <h2>Project & Billing Reports</h2>
-        </div>
-        <div className={styles.filterBtns}>
-          <div className="all_search">
-            <IconField iconPosition="left">
-              <InputIcon className="pi pi-search"> </InputIcon>
-              <InputText
-                value={searchVal}
-                onChange={(e) =>
-                  searchProjectAndBillingsDetails(e.target.value)
-                }
-                v-model="value1"
-                placeholder="Search"
-              />
-            </IconField>
+        >
+          <div className={styles.filterBar}>
+            <h2>Project Billing Status Report</h2>
           </div>
-          <div className={styles.btnAndText}>
-            <div
-              className={styles.btnBackGround}
-              style={{ cursor: reportData.length ? "pointer" : "not-allowed" }}
-              onClick={() => {
-                if (reportData.length) generateExcel(reportData);
-              }}
-            >
-              <img src={ImportUploadImage} alt="no image" />
-              Export
+          <div className={styles.filterBtns}>
+            <div className="all_search">
+              <IconField iconPosition="left">
+                <InputIcon className="pi pi-search"> </InputIcon>
+                <InputText
+                  value={searchVal}
+                  onChange={(e) =>
+                    searchProjectAndBillingsDetails(e.target.value)
+                  }
+                  v-model="value1"
+                  placeholder="Search"
+                />
+              </IconField>
             </div>
-          </div>
+            <div className={styles.btnAndText}>
+              <div
+                className={styles.btnBackGround}
+                style={{
+                  cursor: reportData.length ? "pointer" : "not-allowed",
+                }}
+                onClick={() => {
+                  if (reportData.length) generateExcel(reportData);
+                }}
+              >
+                <img src={ImportUploadImage} alt="no image" />
+                Export
+              </div>
+            </div>
 
-          <div className={styles.btnAndText}>
-            <div
-              className={styles.btnBackGround}
-              onClick={() => setFilterBar(!filterBar)}
-            >
-              <img
-                src={filterBar ? FilterNoneImage : FilterImage}
-                alt="no image"
-              />
-              Filter
+            <div className={styles.btnAndText}>
+              <div
+                className={styles.btnBackGround}
+                onClick={() => setFilterBar(!filterBar)}
+              >
+                <img
+                  src={filterBar ? FilterNoneImage : FilterImage}
+                  alt="no image"
+                />
+                Filter
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      {filterBar ? (
-        <div className={styles.filterFields}>
-          <div className={styles.filterField}>
-            <label>Project Id</label>
-            <InputText
-              value={filterValues?.ProjectID}
-              onChange={(e) => handleFilterChange("ProjectID", e.target.value)}
-              placeholder="Enter here"
-            />
+        {filterBar ? (
+          <div className={styles.filterFields}>
+            <div className={styles.filterField}>
+              <label>Project Id</label>
+              <InputText
+                value={filterValues?.ProjectID}
+                onChange={(e) =>
+                  handleFilterChange("ProjectID", e.target.value)
+                }
+                placeholder="Enter here"
+              />
+            </div>
+            <div className={styles.filterField}>
+              <label>Project Name</label>
+              <InputText
+                value={filterValues?.ProjectName}
+                onChange={(e) =>
+                  handleFilterChange("ProjectName", e.target.value)
+                }
+                placeholder="Enter here"
+              />
+            </div>
+            <div className={styles.filterField}>
+              <label>Project Manager</label>
+              <InputText
+                value={filterValues?.ProjectManager}
+                onChange={(e) =>
+                  handleFilterChange("ProjectManager", e.target.value)
+                }
+                placeholder="Enter project manager name"
+              />
+            </div>
+            <div className={styles.filterField}>
+              <label>Lead</label>
+              <InputText
+                value={filterValues?.Lead}
+                onChange={(e) => handleFilterChange("Lead", e.target.value)}
+                placeholder="Enter here"
+              />
+            </div>
+            <div className={styles.filterField}>
+              <label>Account name</label>
+              <InputText
+                value={filterValues?.AccountName}
+                onChange={(e) =>
+                  handleFilterChange("AccountName", e.target.value)
+                }
+                placeholder="Enter here"
+              />
+            </div>
+            <div className={`${styles.filterField} dropdown`}>
+              <label>Status</label>
+              <Dropdown
+                options={initialCRMBillingsListDropContainer?.Status}
+                optionLabel="name"
+                placeholder="Select a status"
+                value={initialCRMBillingsListDropContainer?.Status.find(
+                  (item) =>
+                    item.name ===
+                    (Config.statusLabelMap[filterValues?.Status] ||
+                      filterValues?.Status)
+                )}
+                onChange={(e) => handleFilterChange("Status", e.value?.name)}
+              />
+            </div>
+            <div className={`${styles.filterField} dropdown`}>
+              <label>Currency</label>
+              <Dropdown
+                options={initialCRMBillingsListDropContainer?.Currency}
+                optionLabel="name"
+                placeholder="Select a billing model"
+                value={initialCRMBillingsListDropContainer?.Currency.find(
+                  (item) => item.name === filterValues?.Currency
+                )}
+                onChange={(e) => handleFilterChange("Currency", e.value?.name)}
+              />
+            </div>
+            <div className={`${styles.filterField} dropdown`}>
+              <label>Invoice Raised ?</label>
+              <Dropdown
+                options={[
+                  { label: "Yes", value: true },
+                  { label: "No", value: false },
+                ]}
+                optionLabel="label"
+                placeholder="Select"
+                value={filterValues.InvoiceTrigger}
+                onChange={(e) => handleFilterChange("InvoiceTrigger", e.value)}
+              />
+            </div>
+
+            <div className={styles.filterField} style={{ width: "3%" }}>
+              <PrimaryButton
+                styles={RefreshButton}
+                iconProps={{ iconName: "refresh" }}
+                className={styles.refresh}
+                onClick={() => {
+                  setSearchVal("");
+                  setFilterValues({
+                    ProjectID: "",
+                    Lead: "",
+                    AccountName: "",
+                    Status: "",
+                    Currency: "",
+                    ProjectName: "",
+                    ProjectManager: "",
+                    InvoiceTrigger: "",
+                  });
+                }}
+              />
+            </div>
           </div>
-          <div className={styles.filterField}>
-            <label>Project Name</label>
-            <InputText
-              value={filterValues?.ProjectName}
-              onChange={(e) =>
-                handleFilterChange("ProjectName", e.target.value)
-              }
-              placeholder="Enter here"
-            />
-          </div>
-          <div className={styles.filterField}>
-            <label>Project Manager</label>
-            <InputText
-              value={filterValues?.ProjectManager}
-              onChange={(e) =>
-                handleFilterChange("ProjectManager", e.target.value)
-              }
-              placeholder="Enter project manager name"
-            />
-          </div>
-          <div className={styles.filterField}>
-            <label>Lead</label>
-            <InputText
-              value={filterValues?.Lead}
-              onChange={(e) => handleFilterChange("Lead", e.target.value)}
-              placeholder="Enter here"
-            />
-          </div>
-          <div className={styles.filterField}>
-            <label>Account name</label>
-            <InputText
-              value={filterValues?.AccountName}
-              onChange={(e) =>
-                handleFilterChange("AccountName", e.target.value)
-              }
-              placeholder="Enter here"
-            />
-          </div>
-          <div className={`${styles.filterField} dropdown`}>
-            <label>Status</label>
-            <Dropdown
-              options={initialCRMBillingsListDropContainer?.Status}
-              optionLabel="name"
-              placeholder="Select a status"
-              value={initialCRMBillingsListDropContainer?.Status.find(
-                (item) =>
-                  item.name ===
-                  (Config.statusLabelMap[filterValues?.Status] ||
-                    filterValues?.Status)
-              )}
-              onChange={(e) => handleFilterChange("Status", e.value?.name)}
-            />
-          </div>
-          <div className={`${styles.filterField} dropdown`}>
-            <label>Currency</label>
-            <Dropdown
-              options={initialCRMBillingsListDropContainer?.Currency}
-              optionLabel="name"
-              placeholder="Select a billing model"
-              value={initialCRMBillingsListDropContainer?.Currency.find(
-                (item) => item.name === filterValues?.Currency
-              )}
-              onChange={(e) => handleFilterChange("Currency", e.value?.name)}
-            />
-          </div>
-          <div className={styles.filterField} style={{ width: "3%" }}>
-            <PrimaryButton
-              styles={RefreshButton}
-              iconProps={{ iconName: "refresh" }}
-              className={styles.refresh}
-              onClick={() => {
-                setSearchVal("");
-                setFilterValues({
-                  ProjectID: "",
-                  Lead: "",
-                  AccountName: "",
-                  Status: "",
-                  Currency: "",
-                  ProjectName: "",
-                  ProjectManager: "",
-                });
-              }}
-            />
-          </div>
-        </div>
-      ) : (
-        ""
-      )}
-      <div
-        className={`${styles.tableData} tableData
+        ) : (
+          ""
+        )}
+        <div
+          className={`${styles.tableData} tableData
                     ${
                       ScreenWidth >= 1536
                         ? "data_table_1536"
                         : "data_table_1396"
                     }`}
-      >
-        <DataTable
-          value={reportData}
-          paginator
-          rows={10}
-          tableStyle={{ minWidth: "100rem" }}
         >
-          <Column sortable field="ProjectID" header="Project ID"></Column>
-          <Column sortable field="ProjectName" header="Project Name"></Column>
-          <Column sortable field="AccountName" header="Account Name"></Column>
-          <Column sortable field="Lead" header="Lead"></Column>
-          <Column
-            sortable
-            field="ProjectManager"
-            header="Project Manager"
-            body={renderProjectManagersColumn}
-          ></Column>
-          <Column
-            sortable
-            field="StartDate"
-            header="Start Date"
-            body={(rowData) => {
-              return (
-                <div>{moment(rowData?.StartDate).format("DD/MM/YYYY")}</div>
-              );
-            }}
-          ></Column>
-          <Column
-            sortable
-            field="PlannedEndDate"
-            header="Planned End Date"
-            body={(rowData) => {
-              return (
-                <div>
-                  {moment(rowData?.PlannedEndDate).format("DD/MM/YYYY")}
-                </div>
-              );
-            }}
-          ></Column>
-          <Column sortable field="BillingMileStone" header="Milestone"></Column>
-          <Column
-            sortable
-            field="DueDate"
-            header="Due Date"
-            body={(rowData) => {
-              return <div>{moment(rowData?.DueDate).format("DD/MM/YYYY")}</div>;
-            }}
-          ></Column>
-          <Column sortable field="Currency" header="Currency"></Column>
-          <Column sortable field="Amount" header="Amount"></Column>
-          <Column
-            sortable
-            field="Status"
-            header="Status"
-            body={renderStatus}
-          ></Column>
-          <Column
-            sortable
-            field="ReminderDaysBeforeDue"
-            header="Reminder (days)"
-          ></Column>
-        </DataTable>
+          <DataTable
+            value={reportData}
+            paginator
+            rows={10}
+            tableStyle={{ minWidth: "150rem" }}
+          >
+            <Column sortable field="ProjectID" header="Project ID"></Column>
+            <Column sortable field="ProjectName" header="Project Name"></Column>
+            <Column sortable field="AccountName" header="Account Name"></Column>
+            <Column sortable field="Lead" header="Lead"></Column>
+            <Column
+              sortable
+              field="ProjectManager"
+              header="Project Manager"
+              body={renderProjectManagersColumn}
+            ></Column>
+            <Column
+              sortable
+              field="BillingModel"
+              header="Billing Model"
+            ></Column>
+            <Column
+              sortable
+              field="StartDate"
+              header="Start Date"
+              body={(rowData) => {
+                return (
+                  <div>{moment(rowData?.StartDate).format("DD/MM/YYYY")}</div>
+                );
+              }}
+            ></Column>
+            <Column
+              sortable
+              field="PlannedEndDate"
+              header="Planned End Date"
+              body={(rowData) => {
+                return (
+                  <div>
+                    {moment(rowData?.PlannedEndDate).format("DD/MM/YYYY")}
+                  </div>
+                );
+              }}
+            ></Column>
+            <Column
+              sortable
+              field="BillingMileStone"
+              header="Milestone"
+              body={milestoneTemplate}
+            ></Column>
+            <Column
+              sortable
+              field="DueDate"
+              header="Due Date"
+              body={(rowData) => {
+                return (
+                  <div>{moment(rowData?.DueDate).format("DD/MM/YYYY")}</div>
+                );
+              }}
+            ></Column>
+            <Column sortable field="Currency" header="Currency"></Column>
+            <Column sortable field="Amount" header="Amount"></Column>
+            <Column
+              sortable
+              field="InvoiceTrigger"
+              header="Invoice Raised ?"
+              body={InvoiceTriggerTemplate}
+            ></Column>
+            <Column
+              sortable
+              field="InvoiceID"
+              header="Invoice No"
+              body={InvoiceIDTemplate}
+            ></Column>
+            <Column
+              sortable
+              field="Status"
+              header="Status"
+              body={renderStatus}
+            ></Column>
+            <Column
+              style={{ width: "15rem" }}
+              sortable
+              field="Remarks"
+              header="Remarks"
+              body={remarksTemplate}
+            ></Column>
+          </DataTable>
+        </div>
       </div>
-    </div>
+      <div style={{ marginTop: "2rem" }}>
+        <MilestonesReports projectAndBillingsDetails={masterReportData} />
+      </div>
+      <div>
+        <PMwiseInvoiceComplianceReport />
+      </div>
+    </>
   );
 };
 
