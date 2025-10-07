@@ -328,11 +328,13 @@ const ProjectFormPage = (props: any) => {
       case "AccountName":
       case "ProjectName":
       case "BillingContactName":
-      case "BillingContactEmail":
-      case "BillingContactMobile":
-      case "BillingAddress":
-      case "Remarks":
         return value && typeof value === "string" && value.trim() !== "";
+
+      case "BillingContactEmail": {
+        // Email regex
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return value && typeof value === "string" && emailRegex.test(value);
+      }
 
       case "StartDate":
       case "PlannedEndDate":
@@ -366,11 +368,6 @@ const ProjectFormPage = (props: any) => {
       errors.BillingContactName = true;
     if (!isValidField("BillingContactEmail", formData?.BillingContactEmail))
       errors.BillingContactEmail = true;
-    if (!isValidField("BillingContactMobile", formData?.BillingContactMobile))
-      errors.BillingContactMobile = true;
-    if (!isValidField("BillingAddress", formData?.BillingAddress))
-      errors.BillingAddress = true;
-    if (!isValidField("Remarks", formData?.Remarks)) errors.Remarks = true;
     if (formData?.StartDate && formData?.PlannedEndDate) {
       const start = formData.StartDate;
       const end = formData.PlannedEndDate;
@@ -805,7 +802,7 @@ const ProjectFormPage = (props: any) => {
           >
             <div className={selfComponentStyles.firstPage}>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project id</Label>
+                <Label>Project ID</Label>
                 <InputText
                   onChange={(e) => handleOnChange("ProjectID", e.target.value)}
                   value={
@@ -832,7 +829,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Account name</Label>
+                <Label>Account Name</Label>
                 <InputText
                   onChange={(e) =>
                     handleOnChange("AccountName", e.target.value)
@@ -847,7 +844,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project name</Label>
+                <Label>Project Name</Label>
                 <InputText
                   onChange={(e) =>
                     handleOnChange("ProjectName", e.target.value)
@@ -862,7 +859,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Start date</Label>
+                <Label>Start Date</Label>
                 <DatePicker
                   value={
                     formData?.StartDate
@@ -946,7 +943,7 @@ const ProjectFormPage = (props: any) => {
             </div>
             <div className={selfComponentStyles.secondPage}>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>BillingContactName</Label>
+                <Label>Billing Contact Name</Label>
                 <InputText
                   onChange={(e) =>
                     handleOnChange("BillingContactName", e.target.value)
@@ -961,7 +958,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Planned end date</Label>
+                <Label>Planned End Date</Label>
                 <DatePicker
                   value={
                     formData?.PlannedEndDate
@@ -986,7 +983,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project manager</Label>
+                <Label>Project Manager</Label>
                 <div
                   className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
                 >
@@ -1045,7 +1042,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Billing model</Label>
+                <Label>Billing Model</Label>
                 <Dropdown
                   options={
                     props?.initialCRMProjectsListDropContainer?.BillingModel
@@ -1074,7 +1071,7 @@ const ProjectFormPage = (props: any) => {
             </div>
             <div className={selfComponentStyles.thirdPage}>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>BillingContactEmail</Label>
+                <Label>Billing Contact Email</Label>
                 <InputText
                   onChange={(e) =>
                     handleOnChange("BillingContactEmail", e.target.value)
@@ -1086,25 +1083,26 @@ const ProjectFormPage = (props: any) => {
                       ? { border: "2px solid #ff0000" }
                       : undefined
                   }
+                  placeholder="e.g., abc@gmail.com"
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>BillingContactMobile</Label>
+                <Label>Billing Contact Mobile</Label>
                 <InputText
-                  onChange={(e) =>
-                    handleOnChange("BillingContactMobile", e.target.value)
-                  }
+                  keyfilter="int"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // allow only digits, and restrict length between 2–16
+                    if (/^\d{0,16}$/.test(value)) {
+                      handleOnChange("BillingContactMobile", value);
+                    }
+                  }}
                   value={formData?.BillingContactMobile}
                   disabled={props?.isView || isProjectManager || isDeliveryHead}
-                  style={
-                    errorMessage["BillingContactMobile"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Delivery head</Label>
+                <Label>Delivery Head</Label>
                 <div
                   className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
                 >
@@ -1156,7 +1154,7 @@ const ProjectFormPage = (props: any) => {
                 </div>
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>BillingAddress</Label>
+                <Label>Billing Address</Label>
                 <InputTextarea
                   onChange={(e) =>
                     handleOnChange("BillingAddress", e.target.value)
@@ -1164,11 +1162,7 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.BillingAddress}
                   disabled={props?.isView || isProjectManager || isDeliveryHead}
                   maxLength={500}
-                  style={
-                    errorMessage["BillingAddress"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
+                  autoResize
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
@@ -1178,11 +1172,7 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.Remarks}
                   disabled={props?.isView || isProjectManager || isDeliveryHead}
                   maxLength={500}
-                  style={
-                    errorMessage["Remarks"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
+                  autoResize
                 />
               </div>
             </div>
