@@ -64,17 +64,123 @@ const MilestonesReports = (props: any) => {
     ...Config.CRMProjectsDropDown,
   });
 
+  //Initial render:
   React.useEffect(() => {
-    const data = props.projectAndBillingsDetails.filter(
-      (item: any) => item.Status == "0"
-    );
-    setFilteredData([...data]);
-    setMasterReportData([...data]);
-  }, [props.projectAndBillingsDetails]);
-
-  React.useEffect(() => {
-    getAllChoices();
+    getProjectAndBillingData();
   }, []);
+
+  //Get Project and Billings data from respective lists:
+  const getProjectAndBillingData = async () => {
+    try {
+      const projectRes: any = await SPServices.SPReadItems({
+        Listname: Config.ListNames.CRMProjects,
+        Select:
+          "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName",
+        Expand: "ProjectManager,Lead",
+        Orderby: "Modified",
+        Orderbydecorasc: true,
+        Filter: [
+          {
+            FilterKey: "IsDelete",
+            Operator: "eq",
+            FilterValue: "false",
+          },
+        ],
+      });
+
+      const billingRes: any = await SPServices.SPReadItems({
+        Listname: Config.ListNames.CRMBillings,
+        Select: "*,Project/Id",
+        Expand: "Project",
+        Orderby: "Modified",
+        Orderbydecorasc: true,
+        Filter: [
+          {
+            FilterKey: "IsDelete",
+            Operator: "eq",
+            FilterValue: "false",
+          },
+        ],
+      });
+      console.log("billingRes", billingRes);
+
+      // Build combined report data
+      let combinedData: any[] = [];
+      projectRes.forEach((project: any) => {
+        let _ProjectManager: IPeoplePickerDetails[] = [];
+        if (project?.ProjectManager) {
+          project?.ProjectManager.forEach((user: any) => {
+            _ProjectManager.push({
+              id: user?.Id,
+              name: user?.Title,
+              email: user?.EMail,
+            });
+          });
+        }
+
+        const relatedBillings = billingRes.filter(
+          (bill: any) => bill.ProjectId == project.ID
+        );
+
+        if (relatedBillings.length > 0) {
+          relatedBillings.forEach((billing: any) => {
+            combinedData.push({
+              ProjectID: project.ProjectID,
+              IsDeleted: project.IsDelete,
+              ProjectName: project.ProjectName,
+              AccountName: project.AccountName,
+              Lead: project.Lead?.FirstName,
+              ProjectManager: _ProjectManager,
+              BillingModel: project.BillingModel,
+              StartDate: project.StartDate,
+              PlannedEndDate: project.PlannedEndDate,
+              Remarks: project.Remarks || "",
+              BillingMileStone: billing.MileStoneName || "",
+              DueDate: billing.DueDate,
+              Amount: billing.Amount,
+              InvoiceTrigger: billing.InvoiceTrigger,
+              InvoiceID: billing.InvoiceID || "",
+              Status: billing.Status,
+              Currency: billing.Currency,
+              ReminderDaysBeforeDue: billing.ReminderDaysBeforeDue || 7,
+            });
+          });
+        } else {
+          // Project without any billings
+          combinedData.push({
+            ProjectID: project.ProjectID,
+            ProjectName: project.ProjectName,
+            AccountName: project.AccountName,
+            Lead: project.Lead?.FirstName,
+            ProjectManager: _ProjectManager,
+            BillingModel: project.BillingModel,
+            StartDate: project.StartDate,
+            PlannedEndDate: project.PlannedEndDate,
+            Remarks: project.Remarks || "",
+            BillingMileStone: "",
+            DueDate: "",
+            Amount: "",
+            InvoiceTrigger: "",
+            InvoiceID: "",
+            Status: "",
+            Currency: "",
+            ReminderDaysBeforeDue: "",
+          });
+        }
+      });
+      const filteredStatusData = combinedData.filter(
+        (item: any) => item.Status == "0"
+      );
+      setFilteredData([...filteredStatusData]);
+      setMasterReportData([...filteredStatusData]);
+      getAllChoices();
+    } catch (error) {
+      console.error(
+        "Error fetching data in reports webpart main component.tsx page:",
+        error
+      );
+    }
+  };
 
   //Get Choices from CRMProjects List:
   const getAllChoices = () => {
@@ -528,7 +634,13 @@ const MilestonesReports = (props: any) => {
             field="DueDate"
             header="Milestone Due Date"
             body={(rowData) => {
-              return <div>{moment(rowData?.DueDate).format("DD/MM/YYYY")}</div>;
+              return (
+                <div>
+                  {rowData?.DueDate
+                    ? moment(rowData?.DueDate).format("DD/MM/YYYY")
+                    : "-"}
+                </div>
+              );
             }}
           />
           <Column sortable field="Amount" header="Amount" />

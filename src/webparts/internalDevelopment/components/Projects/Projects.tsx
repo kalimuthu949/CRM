@@ -96,6 +96,7 @@ const Projects = (props: IProps): JSX.Element => {
     ProjectStatus: "",
     BillingModel: "",
   });
+  console.log(filterValues, "filterValues");
   const [
     initialCRMProjectsListDropContainer,
     setinitialCRMProjectsListDropContainer,
@@ -393,7 +394,8 @@ const Projects = (props: IProps): JSX.Element => {
         filterValues.AccountName.toLowerCase()
       );
       const matchStatus = filterValues.ProjectStatus
-        ? item?.ProjectStatus === filterValues.ProjectStatus
+        ? (Config.projectStatusMap[item?.ProjectStatus] ||
+            item?.ProjectStatus) === filterValues.ProjectStatus
         : true;
       const matchBilling = filterValues.BillingModel
         ? item?.BillingModel === filterValues.BillingModel
@@ -450,9 +452,9 @@ const Projects = (props: IProps): JSX.Element => {
         name: "Project ID",
       },
       {
-        key: "Lead",
-        type: "Lookup",
-        name: "Lead",
+        key: "ProjectName",
+        type: "Text",
+        name: "Project Name",
       },
       {
         key: "AccountName",
@@ -460,10 +462,16 @@ const Projects = (props: IProps): JSX.Element => {
         name: "Account Name",
       },
       {
-        key: "ProjectName",
-        type: "Text",
-        name: "Project Name",
+        key: "Lead",
+        type: "Lookup",
+        name: "Lead",
       },
+      {
+        key: "ProjectManager",
+        type: "PeoplePickerMultiple",
+        name: "Project Manager",
+      },
+
       {
         key: "StartDate",
         type: "Date",
@@ -473,11 +481,6 @@ const Projects = (props: IProps): JSX.Element => {
         key: "PlannedEndDate",
         type: "Date",
         name: "Planned End Date",
-      },
-      {
-        key: "ProjectManager",
-        type: "PeoplePickerMultiple",
-        name: "Project Manager",
       },
       {
         key: "ProjectStatus",
@@ -615,6 +618,7 @@ const Projects = (props: IProps): JSX.Element => {
                       ProjectStatus: "",
                       BillingModel: "",
                     });
+                    setLoader(true);
                     getProjectDetails();
                   }}
                 />
@@ -662,7 +666,7 @@ const Projects = (props: IProps): JSX.Element => {
                       alt="no image"
                       style={{ width: "15px", height: "15px" }}
                     />
-                    New Project
+                    New project
                   </div>
                 </div>
               )}
@@ -755,11 +759,6 @@ const Projects = (props: IProps): JSX.Element => {
               value={projectDetails}
               paginator={projectDetails && projectDetails?.length > 8}
               rows={8}
-              // onRowClick={(e: any) => {
-              //   setSelectedData(e.data);
-              //   setFormMode("view");
-              //   setCurrentPage("form");
-              // }}
               onRowClick={(e: any) => {
                 setSelectedData(e.data);
                 if (isEditable(e.data)) {
@@ -768,16 +767,11 @@ const Projects = (props: IProps): JSX.Element => {
                   setFormMode("view");
                 }
                 setCurrentPage("form");
+                setLoader(true);
               }}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
               <Column sortable field="ProjectID" header="Project id" />
-              <Column sortable field="Lead" header="Lead"></Column>
-              <Column
-                sortable
-                field="AccountName"
-                header="Account name"
-              ></Column>
               <Column
                 sortable
                 field="ProjectName"
@@ -785,11 +779,33 @@ const Projects = (props: IProps): JSX.Element => {
               ></Column>
               <Column
                 sortable
+                field="AccountName"
+                header="Account name"
+              ></Column>
+              <Column sortable field="Lead" header="Lead"></Column>
+              <Column
+                sortable
+                field="ProjectManager"
+                header="Project manager"
+                body={renderManagersColumn}
+              ></Column>
+              <Column
+                sortable
+                field="DeliveryHead"
+                header="Delivery head"
+                body={renderDeliveryHeadsColumn}
+              ></Column>
+              <Column
+                sortable
                 field="StartDate"
                 header="Start date"
                 body={(rowData) => {
                   return (
-                    <div>{moment(rowData?.StartDate).format("DD/MM/YYYY")}</div>
+                    <div>
+                      {rowData?.StartDate
+                        ? moment(rowData?.StartDate).format("DD/MM/YYYY")
+                        : ""}
+                    </div>
                   );
                 }}
               ></Column>
@@ -800,22 +816,12 @@ const Projects = (props: IProps): JSX.Element => {
                 body={(rowData) => {
                   return (
                     <div>
-                      {moment(rowData?.PlannedEndDate).format("DD/MM/YYYY")}
+                      {rowData?.PlannedEndDate
+                        ? moment(rowData?.PlannedEndDate).format("DD/MM/YYYY")
+                        : ""}
                     </div>
                   );
                 }}
-              ></Column>
-              <Column
-                sortable
-                field="ProjectManager"
-                header="Project manager"
-                body={renderManagersColumn}
-              ></Column>
-              <Column
-                sortable
-                field="DeliveryHead"
-                header="Delivery Head"
-                body={renderDeliveryHeadsColumn}
               ></Column>
               <Column
                 sortable
@@ -834,67 +840,6 @@ const Projects = (props: IProps): JSX.Element => {
                 body={(rowData: IProjectData) => {
                   return (
                     <div className={styles.Actions}>
-                      {/* {PMOusers?.some(
-                        (user) =>
-                          user?.email?.toLowerCase() ===
-                            props?.loginUserEmail?.toLowerCase() &&
-                          (rowData?.ProjectStatus == "0" ||
-                            rowData?.ProjectStatus == "4" ||
-                            rowData?.ProjectStatus == "5" ||
-                            rowData?.ProjectStatus == "1")
-                      ) ||
-                      (rowData?.ProjectManager?.some(
-                        (pm: IPeoplePickerDetails) =>
-                          pm?.email?.toLowerCase() ===
-                          props?.loginUserEmail?.toLowerCase()
-                      ) &&
-                        (rowData?.ProjectStatus == "2" ||
-                          (rowData?.ProjectStatus == "6" &&
-                            billingsDetails?.some(
-                              (bill: any) =>
-                                bill?.ProjectId === rowData?.ID &&
-                                bill?.Status == "0"
-                            )))) ||
-                      (rowData?.DeliveryHead?.some(
-                        (pm: IPeoplePickerDetails) =>
-                          pm?.email?.toLowerCase() ===
-                          props?.loginUserEmail?.toLowerCase()
-                      ) &&
-                        rowData?.ProjectStatus == "3") ? (
-                        <>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedData(rowData);
-                              setFormMode("edit");
-                              setCurrentPage("form");
-                            }}
-                          >
-                            <img
-                              title="Edit"
-                              src={EditImage}
-                              alt="no image"
-                            ></img>
-                          </div>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsDelModal({
-                                Id: rowData?.ID,
-                                isOpen: true,
-                              });
-                            }}
-                          >
-                            <img
-                              title="Delete"
-                              src={DeleteImage}
-                              alt="no image"
-                            ></img>
-                          </div>
-                        </>
-                      ) : (
-                        ""
-                      )} */}
                       {isEditable(rowData) ? (
                         <>
                           <div
@@ -903,6 +848,7 @@ const Projects = (props: IProps): JSX.Element => {
                               setSelectedData(rowData);
                               setFormMode("edit");
                               setCurrentPage("form");
+                              setLoader(true);
                             }}
                           >
                             <img title="Edit" src={EditImage} alt="no image" />
@@ -937,24 +883,26 @@ const Projects = (props: IProps): JSX.Element => {
                           alt="no image"
                         ></img>
                       </div>
-
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsCmtsLoader(true);
-                          setIsCommentsModal({
-                            isOpen: true,
-                            Id: rowData?.ID,
-                          });
-                          getAllRejectComments(rowData?.ID);
-                        }}
-                      >
-                        <img
-                          title="Reject Comments"
-                          src={commentsImage}
-                          alt="no image"
-                        ></img>
-                      </div>
+                      {(rowData?.ProjectStatus == "4" ||
+                        rowData?.ProjectStatus == "5") && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsCmtsLoader(true);
+                            setIsCommentsModal({
+                              isOpen: true,
+                              Id: rowData?.ID,
+                            });
+                            getAllRejectComments(rowData?.ID);
+                          }}
+                        >
+                          <img
+                            title="Reject Comments"
+                            src={commentsImage}
+                            alt="no image"
+                          ></img>
+                        </div>
+                      )}
                     </div>
                   );
                 }}
@@ -973,6 +921,7 @@ const Projects = (props: IProps): JSX.Element => {
             initialCRMProjectsListDropContainer
           }
           data={selectedData}
+          setLoader={setLoader}
           isAdd={formMode === "add"}
           isEdit={formMode === "edit"}
           isView={formMode === "view"}
@@ -994,7 +943,7 @@ const Projects = (props: IProps): JSX.Element => {
       )}
       <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>
         <p className={styles.delmsg}>
-          Are you sure, you want to delete this Project?
+          Are you sure, you want to delete this project?
         </p>
         <div className={styles.modalBtnSec}>
           <PrimaryButton
@@ -1070,14 +1019,8 @@ const Projects = (props: IProps): JSX.Element => {
                 }
               >
                 <Column
-                  field="reason"
-                  header="Reason"
-                  style={{ width: "33.3%" }}
-                  body={(row: any) => textTemplate(row?.reason)}
-                ></Column>
-                <Column
                   field="Reason"
-                  header="Created By"
+                  header="Created by"
                   style={{ width: "33.3%" }}
                   body={(row: any) => peoplePickerTemplate(row?.reasonUser)}
                 ></Column>
@@ -1086,6 +1029,12 @@ const Projects = (props: IProps): JSX.Element => {
                   header="Date"
                   body={(row: any) => rejectReasonCreatedDate(row?.created)}
                   style={{ width: "33.3%" }}
+                ></Column>
+                <Column
+                  field="reason"
+                  header="Reason"
+                  style={{ width: "33.3%" }}
+                  body={(row: any) => textTemplate(row?.reason)}
                 ></Column>
               </DataTable>
             </div>
