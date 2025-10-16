@@ -29,7 +29,6 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
-  console.log(props, "props in Billings.tsx component");
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
   const BillingModel: string = props?.BillingModel;
@@ -43,6 +42,7 @@ const Billings = (props: any) => {
   const [billingsDetails, setBillingDetails] = React.useState<
     IBillingsDetails[]
   >([]);
+  console.log(billingsDetails, "billingsDetails in billing.tsx");
   const [masterBillingsDetails, setMasterBillingDetails] = React.useState<
     IBillingsDetails[]
   >([]);
@@ -55,6 +55,11 @@ const Billings = (props: any) => {
     isOpen: false,
     Id: null,
   });
+  const [isInvoiceRaiseModal, setIsInvoiceRaiseModal] =
+    React.useState<IDelModal>({
+      isOpen: false,
+      Id: null,
+    });
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [loader, setLoader] = React.useState<boolean>(false);
   const [isFormModalOpen, setIsFormModalOpen] = React.useState(false);
@@ -150,7 +155,7 @@ const Billings = (props: any) => {
         RequestJSON: currObj,
       })
         .then(() => {
-          props.Notify("success", "Success", "Bill Deleted successfully");
+          props.Notify("success", "Success", "Milestone deleted successfully");
           getBillingsListDetails();
         })
         .catch((err) => {
@@ -193,7 +198,7 @@ const Billings = (props: any) => {
       },
     })
       .then(() => {
-        props?.Notify("success", "Success", "Invoice Triggered successfully");
+        props?.Notify("success", "Success", "Invoice raised successfully");
         getBillingsListDetails();
       })
       .catch((err: any) => {
@@ -254,7 +259,7 @@ const Billings = (props: any) => {
           `}
           >
             <div className={styles.filterBar}>
-              <h2>Milestones ({props?.BillingModel} based)</h2>
+              <h2>Invoices ({props?.BillingModel})</h2>
             </div>
             <div className={styles.filterBtns}>
               <div className="all_search">
@@ -281,28 +286,12 @@ const Billings = (props: any) => {
                       alt="no image"
                       style={{ width: "15px", height: "15px" }}
                     />
-                    New Milestone
+                    New milestone
                   </div>
                 </div>
               ) : (
                 ""
               )}
-              {/* <div className={styles.btnAndText}>
-                <div
-                  onClick={() => {
-                    props?.goBack();
-                  }}
-                  className={styles.btnBackGround}
-                  style={{ gap: "10px" }}
-                >
-                  <img
-                    src={BackImage}
-                    alt="no image"
-                    style={{ width: "17px", height: "17px" }}
-                  />
-                  Back
-                </div>
-              </div> */}
             </div>
           </div>
           <div
@@ -330,29 +319,6 @@ const Billings = (props: any) => {
               }}
               emptyMessage={<p className={styles.noData}>No data !!!</p>}
             >
-              <Column
-                sortable
-                field="DueDate"
-                header="Due date"
-                body={(rowData) => {
-                  return (
-                    <div>{moment(rowData?.DueDate).format("DD/MM/YYYY")}</div>
-                  );
-                }}
-              ></Column>
-              <Column
-                sortable
-                field="Status"
-                header="Status"
-                body={renderStatus}
-              ></Column>
-              <Column
-                sortable
-                field="ReminderDaysBeforeDue"
-                header="Reminder days before due"
-              ></Column>
-              <Column sortable field="Notes" header="Notes"></Column>
-              <Column sortable field="Currency" header=" Currency"></Column>
               {BillingModel == "Milestone" && (
                 <Column
                   sortable
@@ -370,33 +336,6 @@ const Billings = (props: any) => {
               {BillingModel == "Milestone" && (
                 <Column sortable field="Amount" header="Amount"></Column>
               )}
-              {BillingModel == "T&M" && (
-                <Column
-                  sortable
-                  field="BillingFrequency"
-                  header="Billing frequency"
-                ></Column>
-              )}
-              {BillingModel == "T&M" && (
-                <Column
-                  sortable
-                  field="ResourceType"
-                  header="Resource type"
-                ></Column>
-              )}
-              {BillingModel == "T&M" && (
-                <Column sortable field="Rate" header="Rate"></Column>
-              )}
-              {BillingModel == "T&M" && (
-                <Column sortable field="Hours" header="Hours"></Column>
-              )}
-              {BillingModel == "FixedMonthly" && (
-                <Column
-                  sortable
-                  field="MonthlyAmount"
-                  header="Monthly amount"
-                ></Column>
-              )}
               {BillingModel == "FixedMonthly" && (
                 <Column
                   sortable
@@ -404,7 +343,9 @@ const Billings = (props: any) => {
                   header="Start month"
                   body={(rowData) => {
                     return (
-                      <div>{moment(rowData?.StartMonth).format("MM/YYYY")}</div>
+                      <div>
+                        {moment(rowData?.StartMonth).format("MMM/YYYY")}
+                      </div>
                     );
                   }}
                 ></Column>
@@ -416,11 +357,63 @@ const Billings = (props: any) => {
                   header="End month"
                   body={(rowData) => {
                     return (
-                      <div>{moment(rowData?.EndMonth).format("MM/YYYY")}</div>
+                      <div>{moment(rowData?.EndMonth).format("MMM/YYYY")}</div>
                     );
                   }}
                 ></Column>
               )}
+              {BillingModel == "FixedMonthly" && (
+                <Column
+                  sortable
+                  field="MonthlyAmount"
+                  header="Monthly amount"
+                ></Column>
+              )}
+              {BillingModel == "T&M" && (
+                <Column
+                  sortable
+                  field="ResourceType"
+                  header="Resource type"
+                ></Column>
+              )}
+              {BillingModel == "T&M" && (
+                <Column
+                  sortable
+                  field="BillingFrequency"
+                  header="Billing frequency"
+                ></Column>
+              )}
+
+              {BillingModel == "T&M" && (
+                <Column sortable field="Rate" header="Rate"></Column>
+              )}
+              {BillingModel == "T&M" && (
+                <Column sortable field="Hours" header="Hours"></Column>
+              )}
+              <Column sortable field="Currency" header=" Currency"></Column>
+              <Column
+                sortable
+                field="DueDate"
+                header="Due date"
+                body={(rowData) => {
+                  return (
+                    <div>{moment(rowData?.DueDate).format("DD/MM/YYYY")}</div>
+                  );
+                }}
+              ></Column>
+              <Column
+                sortable
+                field="ReminderDaysBeforeDue"
+                header="Reminder days before due"
+              ></Column>
+              <Column
+                sortable
+                field="Status"
+                header="Status"
+                body={renderStatus}
+              ></Column>
+              <Column sortable field="Notes" header="Notes"></Column>
+
               {!props?.isView && !props?.isDeliveryHead && (
                 <Column
                   field="Action"
@@ -472,7 +465,11 @@ const Billings = (props: any) => {
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleInvoiceTrigger(rowData?.ID);
+                              // handleInvoiceTrigger(rowData?.ID);
+                              setIsInvoiceRaiseModal({
+                                Id: rowData?.ID,
+                                isOpen: true,
+                              });
                             }}
                           >
                             <img
@@ -542,6 +539,34 @@ const Billings = (props: any) => {
                 isOpen: false,
               }));
               TrashItem();
+            }}
+          />
+        </div>
+      </Modal>
+      {/*Invoice trigger Model popup...................................................*/}
+      <Modal isOpen={isInvoiceRaiseModal.isOpen} styles={Config.delModalStyle}>
+        <p className={styles.delmsg}>
+          Are you sure you want to raise an invoice for this milestone?
+        </p>
+        <div className={styles.modalBtnSec}>
+          <PrimaryButton
+            text="No"
+            className={styles.cancelBtn}
+            onClick={() => {
+              setIsInvoiceRaiseModal({ isOpen: false, Id: null });
+            }}
+          />
+          <PrimaryButton
+            text="Yes"
+            className={styles.addBtn}
+            onClick={() => {
+              setIsInvoiceRaiseModal((pre) => ({
+                ...pre,
+                isOpen: false,
+              }));
+              if (isInvoiceRaiseModal?.Id !== null) {
+                handleInvoiceTrigger(isInvoiceRaiseModal.Id);
+              }
             }}
           />
         </div>

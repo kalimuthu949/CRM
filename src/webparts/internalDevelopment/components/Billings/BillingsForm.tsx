@@ -26,9 +26,9 @@ import { InputText } from "primereact/inputtext";
 import { DatePicker, Label, PrimaryButton } from "@fluentui/react";
 import { Dropdown } from "primereact/dropdown";
 import { InputTextarea } from "primereact/inputtextarea";
+import Loading from "../../../../ExternalRef/Loader/Loading";
 
 const BillingsForm = (props: any) => {
-  console.log(props?.ProjectsFormData, "selectedProjectsData");
   //Local States:
   const [
     initialCRMBillingsListDropContainer,
@@ -36,16 +36,12 @@ const BillingsForm = (props: any) => {
   ] = useState<ICRMBillingsListDrop>({
     ...Config.CRMBillingsDropDown,
   });
-  console.log(
-    initialCRMBillingsListDropContainer,
-    "initialCRMBillingsListDropContainer"
-  );
   const [formData, setFormData] = useState<any>({});
-  console.log(formData, "formData");
   const [errorMessage, setErrorMessage] = useState<{ [key: string]: boolean }>(
     {}
   );
   const [tempBillingsFormArray, setTempBillingsFormArray] = useState<any[]>([]);
+  const [loader, setLoader] = React.useState<boolean>(false);
   console.log(tempBillingsFormArray, "tembiilingsFormArray");
 
   //Get All choices from Project List:
@@ -291,6 +287,7 @@ const BillingsForm = (props: any) => {
 
   //Add datas to CRMBillings List:
   const handleAdd = (json: any) => {
+    setLoader(true);
     if (props?.projectsFormAdd) {
       const oldData = JSON.parse(
         sessionStorage.getItem("billingsData") || "[]"
@@ -302,17 +299,21 @@ const BillingsForm = (props: any) => {
       sessionStorage.setItem("billingsData", JSON.stringify(updatedArray));
       props?.getBillingFormDetails(updatedArray);
       props?.getBillingsAddDetails(updatedArray);
+      setLoader(false);
       props?.goBackBiilingsDashboard();
     } else {
       SPServices.SPAddItem({
         Listname: Config.ListNames.CRMBillings,
         RequestJSON: json,
       })
-        .then(() => {
-          props.Notify("success", "Success", "Details added successfully");
+        .then((res) => {
+          props.Notify("success", "Success", "Milestone added successfully");
           emptyDatas();
+          props?.getBillingsAddDetails(res);
+          setLoader(false);
         })
         .catch((err) => {
+          setLoader(false);
           console.log(
             err,
             "Add Datas to CRMBillings err in BillingsFormPage.tsx component"
@@ -323,6 +324,7 @@ const BillingsForm = (props: any) => {
 
   //Update Datas to CRMProjects List:
   const handleUpdate = (json: any) => {
+    setLoader(true);
     if (props?.projectsFormAdd) {
       const oldData = JSON.parse(
         sessionStorage.getItem("billingsData") || "[]"
@@ -334,6 +336,7 @@ const BillingsForm = (props: any) => {
       sessionStorage.setItem("billingsData", JSON.stringify(updatedArray));
       props?.getBillingFormDetails(updatedArray);
       props?.getBillingsAddDetails(updatedArray);
+      setLoader(false);
       props?.goBackBiilingsDashboard();
     } else {
       SPServices.SPUpdateItem({
@@ -341,9 +344,11 @@ const BillingsForm = (props: any) => {
         RequestJSON: json,
         ID: formData?.ID,
       })
-        .then(() => {
-          props.Notify("success", "Success", "Details updated successfully");
+        .then((res) => {
+          props.Notify("success", "Success", "Milestone updated successfully");
           emptyDatas();
+          props?.getBillingsAddDetails(res);
+          setLoader(false);
         })
         .catch((err) => {
           console.log(
@@ -383,70 +388,265 @@ const BillingsForm = (props: any) => {
     }
   }, []);
   return (
-    <div
-      style={{ margin: "0px", height: "490px" }}
-      className={styles.viewFormMain}
-    >
-      <div className={styles.viewFormNavBar}>
-        <h2>
-          {props?.isAdd
-            ? "Add Milestone"
-            : props?.isEdit
-            ? "Edit Milestone"
-            : "View Milestone"}
-        </h2>
-      </div>
-      <div style={{ height: "48vh" }} className={projectFormStyles.formPage}>
-        <div className={projectFormStyles.firstPage}>
-          <div className={`${projectFormStyles.allField} dealFormPage`}>
-            <Label>Currency</Label>
-            <Dropdown
-              value={initialCRMBillingsListDropContainer?.Currency.find(
-                (item) => item.name === formData?.Currency
+    <>
+      {loader ? (
+        <Loading />
+      ) : (
+        <div
+          style={{ margin: "0px", height: "490px" }}
+          className={styles.viewFormMain}
+        >
+          <div className={styles.viewFormNavBar}>
+            <h2>
+              {props?.isAdd
+                ? "Add milestone"
+                : props?.isEdit
+                ? "Edit milestone"
+                : "View milestone"}
+            </h2>
+          </div>
+          <div
+            style={{ height: "48vh" }}
+            className={projectFormStyles.formPage}
+          >
+            <div className={projectFormStyles.firstPage}>
+              {props?.BillingModel == "Milestone" && (
+                <>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Milestone name</Label>
+                    <InputText
+                      value={formData?.MileStoneName}
+                      onChange={(e) =>
+                        handleOnChange("MileStoneName", e.target.value)
+                      }
+                      placeholder="Enter Milestone name"
+                      style={
+                        errorMessage["MileStoneName"]
+                          ? { border: "2px solid #ff0000" }
+                          : undefined
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Milestone description</Label>
+                    <InputTextarea
+                      maxLength={500}
+                      value={formData?.MileStoneDescription}
+                      onChange={(e) =>
+                        handleOnChange("MileStoneDescription", e.target.value)
+                      }
+                      disabled={props?.isView}
+                      autoResize
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Amount</Label>
+                    <InputText
+                      value={formData?.Amount}
+                      //   onChange={(e) => handleOnChange("Amount", e.target.value)}
+                      onChange={(e) => {
+                        const onlyNumbers = e.target.value.replace(/\D/g, "");
+                        handleOnChange("Amount", onlyNumbers);
+                      }}
+                      placeholder="Enter amount"
+                      style={
+                        errorMessage["Amount"]
+                          ? { border: "2px solid #ff0000" }
+                          : undefined
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                </>
               )}
-              onChange={(e) => handleOnChange("Currency", e?.value?.name)}
-              options={initialCRMBillingsListDropContainer?.Currency}
-              optionLabel="name"
-              placeholder="Select a currency"
-              style={
-                errorMessage["Currency"]
-                  ? { border: "2px solid #ff0000", borderRadius: "4px" }
-                  : undefined
-              }
-              disabled={props?.isView}
-            />
-          </div>
-          <div className={`${projectFormStyles.allField} dealFormPage`}>
-            <Label>Notes</Label>
-            <InputText
-              value={formData?.Notes}
-              onChange={(e) => handleOnChange("Notes", e.target.value)}
-              placeholder="Enter notes"
-              disabled={props?.isView}
-            />
-          </div>
-          <div className={`${projectFormStyles.allField} dealFormPage`}>
-            <Label>Due date</Label>
-            <DatePicker
-              value={
-                formData?.DueDate ? new Date(formData?.DueDate) : undefined
-              }
-              onSelectDate={(date) => handleOnChange("DueDate", date)}
-              styles={
-                errorMessage["DueDate"]
-                  ? {
-                      root: {
-                        border: "2px solid #ff0000",
-                        height: "35px",
-                        borderRadius: "4px",
-                      },
+              {props?.BillingModel == "FixedMonthly" && (
+                <>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label> Start month</Label>
+                    <DatePicker
+                      value={
+                        formData?.StartMonth
+                          ? new Date(formData?.StartMonth)
+                          : undefined
+                      }
+                      formatDate={(date) =>
+                        date
+                          ? date.toLocaleString("default", {
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : ""
+                      }
+                      onSelectDate={(date) =>
+                        handleOnChange("StartMonth", date)
+                      }
+                      styles={
+                        errorMessage["StartMonth"]
+                          ? {
+                              root: {
+                                border: "2px solid #ff0000",
+                                height: "35px",
+                                borderRadius: "4px",
+                              },
+                            }
+                          : DatePickerStyles
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>End month</Label>
+                    <DatePicker
+                      value={
+                        formData?.EndMonth
+                          ? new Date(formData?.EndMonth)
+                          : undefined
+                      }
+                      onSelectDate={(date) => handleOnChange("EndMonth", date)}
+                      formatDate={(date) =>
+                        date
+                          ? date.toLocaleString("default", {
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : ""
+                      }
+                      styles={
+                        errorMessage["EndMonth"]
+                          ? {
+                              root: {
+                                border: "2px solid #ff0000",
+                                height: "35px",
+                                borderRadius: "4px",
+                              },
+                            }
+                          : DatePickerStyles
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Monthly amount</Label>
+                    <InputText
+                      value={formData?.MonthlyAmount}
+                      onChange={(e) => {
+                        const onlyNumbers = e.target.value.replace(/\D/g, "");
+                        handleOnChange("MonthlyAmount", onlyNumbers);
+                      }}
+                      placeholder="Enter Monthly amount"
+                      style={
+                        errorMessage["MonthlyAmount"]
+                          ? { border: "2px solid #ff0000" }
+                          : undefined
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                </>
+              )}
+              {props?.BillingModel == "T&M" && (
+                <div className={`${projectFormStyles.allField} dealFormPage`}>
+                  <Label>Resource type</Label>
+                  <InputText
+                    value={formData?.ResourceType}
+                    onChange={(e) =>
+                      handleOnChange("ResourceType", e.target.value)
                     }
-                  : DatePickerStyles
-              }
-              disabled={props?.isView}
-            />
-          </div>
-          {/* <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    placeholder="Enter Resource type"
+                    style={
+                      errorMessage["ResourceType"]
+                        ? { border: "2px solid #ff0000" }
+                        : undefined
+                    }
+                    disabled={props?.isView}
+                  />
+                </div>
+              )}
+              {props?.BillingModel == "T&M" && (
+                <>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Billing frequency</Label>
+                    <Dropdown
+                      value={initialCRMBillingsListDropContainer?.BillingFrequency.find(
+                        (item) => item.name === formData?.BillingFrequency
+                      )}
+                      onChange={(e) =>
+                        handleOnChange("BillingFrequency", e?.value?.name)
+                      }
+                      options={
+                        initialCRMBillingsListDropContainer?.BillingFrequency
+                      }
+                      optionLabel="name"
+                      placeholder="Select a BillingFrequency"
+                      style={
+                        errorMessage["BillingFrequency"]
+                          ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                          : undefined
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Rate</Label>
+                    <InputText
+                      value={formData?.Rate}
+                      onChange={(e) => {
+                        const onlyNumbers = e.target.value.replace(/\D/g, "");
+                        handleOnChange("Rate", onlyNumbers);
+                      }}
+                      placeholder="Enter Rate"
+                      style={
+                        errorMessage["Rate"]
+                          ? { border: "2px solid #ff0000" }
+                          : undefined
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Hours</Label>
+                    <InputText
+                      value={formData?.Hours || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Allow only digits and colon
+                        const regex = /^[0-9:]*$/;
+                        if (regex.test(val)) {
+                          handleOnChange("Hours", val);
+                        }
+                      }}
+                      placeholder="Enter Hours (e.g. 90:20)"
+                      style={
+                        errorMessage["Hours"]
+                          ? { border: "2px solid #ff0000" }
+                          : undefined
+                      }
+                      disabled={props?.isView}
+                    />
+                  </div>
+                </>
+              )}
+              <div className={`${projectFormStyles.allField} dealFormPage`}>
+                <Label>Currency</Label>
+                <Dropdown
+                  value={initialCRMBillingsListDropContainer?.Currency.find(
+                    (item) => item.name === formData?.Currency
+                  )}
+                  onChange={(e) => handleOnChange("Currency", e?.value?.name)}
+                  options={initialCRMBillingsListDropContainer?.Currency}
+                  optionLabel="name"
+                  placeholder="Select a currency"
+                  style={
+                    errorMessage["Currency"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+
+              {/* <div className={`${projectFormStyles.allField} dealFormPage`}>
             <Label>Status</Label>
             <Dropdown
               value={initialCRMBillingsListDropContainer?.Status.find(
@@ -466,247 +666,79 @@ const BillingsForm = (props: any) => {
               disabled
             />
           </div> */}
-          <div className={`${projectFormStyles.allField} dealFormPage`}>
-            <Label>Reminder days before due</Label>
-            <InputText
-              value={formData?.ReminderDaysBeforeDue}
-              onChange={(e) => {
-                const onlyNumbers = e.target.value.replace(/\D/g, "");
-                handleOnChange("ReminderDaysBeforeDue", onlyNumbers);
-              }}
-              placeholder="Enter Reminder days before due"
-              style={
-                errorMessage["ReminderDaysBeforeDue"]
-                  ? { border: "2px solid #ff0000" }
-                  : undefined
-              }
-              disabled={props?.isView}
-            />
+            </div>
+            <div className={projectFormStyles.secondPage}>
+              <div className={`${projectFormStyles.allField} dealFormPage`}>
+                <Label>Due date</Label>
+                <DatePicker
+                  value={
+                    formData?.DueDate ? new Date(formData?.DueDate) : undefined
+                  }
+                  onSelectDate={(date) => handleOnChange("DueDate", date)}
+                  styles={
+                    errorMessage["DueDate"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+              <div className={`${projectFormStyles.allField} dealFormPage`}>
+                <Label>Reminder days before due</Label>
+                <InputText
+                  value={formData?.ReminderDaysBeforeDue}
+                  onChange={(e) => {
+                    const onlyNumbers = e.target.value.replace(/\D/g, "");
+                    handleOnChange("ReminderDaysBeforeDue", onlyNumbers);
+                  }}
+                  placeholder="Enter Reminder days before due"
+                  style={
+                    errorMessage["ReminderDaysBeforeDue"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView}
+                />
+              </div>
+
+              <div className={`${projectFormStyles.allField} dealFormPage`}>
+                <Label>Notes</Label>
+                <InputText
+                  value={formData?.Notes}
+                  onChange={(e) => handleOnChange("Notes", e.target.value)}
+                  placeholder="Enter notes"
+                  disabled={props?.isView}
+                />
+              </div>
+            </div>
+          </div>
+          <div className={styles.addUpdateBtns}>
+            <PrimaryButton
+              className={styles.cancelBtn}
+              iconProps={{ iconName: "cancel" }}
+              onClick={() => props?.goBackBiilingsDashboard()}
+            >
+              Cancel
+            </PrimaryButton>
+            {props?.isView == false && (
+              <PrimaryButton
+                className={styles.updateBtn}
+                iconProps={{ iconName: "Save" }}
+                onClick={() => Validation()}
+              >
+                {props?.isEdit ? "Update" : "Save"}
+              </PrimaryButton>
+            )}
           </div>
         </div>
-
-        <div className={projectFormStyles.secondPage}>
-          {props?.BillingModel == "Milestone" && (
-            <>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Milestone Name</Label>
-                <InputText
-                  value={formData?.MileStoneName}
-                  onChange={(e) =>
-                    handleOnChange("MileStoneName", e.target.value)
-                  }
-                  placeholder="Enter Milestone name"
-                  style={
-                    errorMessage["MileStoneName"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Milestone Description</Label>
-                <InputTextarea
-                  maxLength={500}
-                  value={formData?.MileStoneDescription}
-                  onChange={(e) =>
-                    handleOnChange("MileStoneDescription", e.target.value)
-                  }
-                  disabled={props?.isView}
-                  autoResize
-                />
-              </div>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Amount</Label>
-                <InputText
-                  value={formData?.Amount}
-                  //   onChange={(e) => handleOnChange("Amount", e.target.value)}
-                  onChange={(e) => {
-                    const onlyNumbers = e.target.value.replace(/\D/g, "");
-                    handleOnChange("Amount", onlyNumbers);
-                  }}
-                  placeholder="Enter amount"
-                  style={
-                    errorMessage["Amount"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-            </>
-          )}
-          {props?.BillingModel == "T&M" && (
-            <>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Billing frequency</Label>
-                <Dropdown
-                  value={initialCRMBillingsListDropContainer?.BillingFrequency.find(
-                    (item) => item.name === formData?.BillingFrequency
-                  )}
-                  onChange={(e) =>
-                    handleOnChange("BillingFrequency", e?.value?.name)
-                  }
-                  options={
-                    initialCRMBillingsListDropContainer?.BillingFrequency
-                  }
-                  optionLabel="name"
-                  placeholder="Select a BillingFrequency"
-                  style={
-                    errorMessage["BillingFrequency"]
-                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
-                      : undefined
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Rate</Label>
-                <InputText
-                  value={formData?.Rate}
-                  onChange={(e) => {
-                    const onlyNumbers = e.target.value.replace(/\D/g, "");
-                    handleOnChange("Rate", onlyNumbers);
-                  }}
-                  placeholder="Enter Rate"
-                  style={
-                    errorMessage["Rate"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Hours</Label>
-                <InputText
-                  value={formData?.Hours || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    // Allow only digits and colon
-                    const regex = /^[0-9:]*$/;
-                    if (regex.test(val)) {
-                      handleOnChange("Hours", val);
-                    }
-                  }}
-                  placeholder="Enter Hours (e.g. 90:20)"
-                  style={
-                    errorMessage["Hours"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className={projectFormStyles.thirdPage}>
-          {props?.BillingModel == "FixedMonthly" && (
-            <>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label> Start month</Label>
-                <DatePicker
-                  value={
-                    formData?.StartMonth
-                      ? new Date(formData?.StartMonth)
-                      : undefined
-                  }
-                  onSelectDate={(date) => handleOnChange("StartMonth", date)}
-                  styles={
-                    errorMessage["StartMonth"]
-                      ? {
-                          root: {
-                            border: "2px solid #ff0000",
-                            height: "35px",
-                            borderRadius: "4px",
-                          },
-                        }
-                      : DatePickerStyles
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>End month</Label>
-                <DatePicker
-                  value={
-                    formData?.EndMonth
-                      ? new Date(formData?.EndMonth)
-                      : undefined
-                  }
-                  onSelectDate={(date) => handleOnChange("EndMonth", date)}
-                  styles={
-                    errorMessage["EndMonth"]
-                      ? {
-                          root: {
-                            border: "2px solid #ff0000",
-                            height: "35px",
-                            borderRadius: "4px",
-                          },
-                        }
-                      : DatePickerStyles
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-              <div className={`${projectFormStyles.allField} dealFormPage`}>
-                <Label>Monthly amount</Label>
-                <InputText
-                  value={formData?.MonthlyAmount}
-                  onChange={(e) => {
-                    const onlyNumbers = e.target.value.replace(/\D/g, "");
-                    handleOnChange("MonthlyAmount", onlyNumbers);
-                  }}
-                  placeholder="Enter Monthly amount"
-                  style={
-                    errorMessage["MonthlyAmount"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                  disabled={props?.isView}
-                />
-              </div>
-            </>
-          )}
-          {props?.BillingModel == "T&M" && (
-            <div className={`${projectFormStyles.allField} dealFormPage`}>
-              <Label>Resource type</Label>
-              <InputText
-                value={formData?.ResourceType}
-                onChange={(e) => handleOnChange("ResourceType", e.target.value)}
-                placeholder="Enter Resource type"
-                style={
-                  errorMessage["ResourceType"]
-                    ? { border: "2px solid #ff0000" }
-                    : undefined
-                }
-                disabled={props?.isView}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={styles.addUpdateBtns}>
-        <PrimaryButton
-          className={styles.cancelBtn}
-          iconProps={{ iconName: "cancel" }}
-          onClick={() => props?.goBackBiilingsDashboard()}
-        >
-          Cancel
-        </PrimaryButton>
-        {props?.isView == false && (
-          <PrimaryButton
-            className={styles.updateBtn}
-            iconProps={{ iconName: "Save" }}
-            onClick={() => Validation()}
-          >
-            {props?.isEdit ? "Update" : "Save"}
-          </PrimaryButton>
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
 };
 

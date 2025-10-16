@@ -16,6 +16,7 @@ import { useState } from "react";
 import {
   DatePicker,
   IPersonaProps,
+  Modal,
   NormalPeoplePicker,
   PrimaryButton,
 } from "@fluentui/react";
@@ -32,6 +33,7 @@ import {
 import SPServices from "../../../../ExternalRef/CommonServices/SPServices";
 import {
   IBasicDropDown,
+  IDelModal,
   IPeoplePickerDetails,
 } from "../../../../ExternalRef/CommonServices/interface";
 import { IConfigState } from "../Redux/ConfigPageInterfaces";
@@ -59,7 +61,9 @@ const ProjectFormPage = (props: any) => {
   const [deletedFiles, setDeletedFiles] = useState<any[]>([]);
   const [loader, setLoader] = useState<boolean>(false);
   const [billingsData, setBillingsData] = useState<any[]>([]);
+  console.log("billingsData", billingsData);
   const [billingsListData, setBillingsListData] = useState<any[]>([]);
+  console.log("billingsListData", billingsListData);
   const [PMOusers, setPMOusers] = useState<IPeoplePickerDetails[]>([]);
   const [DHusers, setDHusers] = useState<IPeoplePickerDetails[]>([]);
   const [isApproval, setIsApproval] = useState<any>({
@@ -68,6 +72,16 @@ const ProjectFormPage = (props: any) => {
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [isDelModal, setIsDelModal] = React.useState<IDelModal>({
+    isOpen: false,
+    Id: null,
+  });
+  const [isSendApproveModal, setIsSendApproveModal] = React.useState<IDelModal>(
+    {
+      isOpen: false,
+      Id: null,
+    }
+  );
 
   //Data refresh and goBack mainPage function:
   const emptyDatas = () => {
@@ -121,6 +135,7 @@ const ProjectFormPage = (props: any) => {
         getPMOGroupUsers();
         getDHGroupMembers();
         getBillingsListDetails();
+        props?.setLoader(false);
       })
       .catch((err) => {
         console.error("Error fetching CRMLeads:", err);
@@ -344,6 +359,50 @@ const ProjectFormPage = (props: any) => {
         return true;
     }
   };
+  // const Validation = () => {
+  //   let errors: { [key: string]: boolean } = {};
+
+  //   if (!isValidField("ProjectManager", formData?.ProjectManager))
+  //     errors.ProjectManager = true;
+  //   if (!isValidField("DeliveryHead", formData?.DeliveryHead))
+  //     errors.DeliveryHead = true;
+  //   if (!isValidField("Lead", formData?.Lead)) errors.Lead = true;
+  //   if (!isValidField("AccountName", formData?.AccountName))
+  //     errors.AccountName = true;
+  //   if (!isValidField("ProjectName", formData?.ProjectName))
+  //     errors.ProjectName = true;
+  //   if (!isValidField("StartDate", formData?.StartDate))
+  //     errors.StartDate = true;
+  //   if (!isValidField("PlannedEndDate", formData?.PlannedEndDate))
+  //     errors.PlannedEndDate = true;
+  //   if (!isValidField("ProjectStatus", formData?.ProjectStatus))
+  //     errors.ProjectStatus = true;
+  //   if (!isValidField("BillingModel", formData?.BillingModel))
+  //     errors.BillingModel = true;
+  //   if (!isValidField("BillingContactName", formData?.BillingContactName))
+  //     errors.BillingContactName = true;
+  //   if (!isValidField("BillingContactEmail", formData?.BillingContactEmail))
+  //     errors.BillingContactEmail = true;
+  //   if (formData?.StartDate && formData?.PlannedEndDate) {
+  //     const start = formData.StartDate;
+  //     const end = formData.PlannedEndDate;
+  //     if (end < start) {
+  //       props.Notify(
+  //         "error",
+  //         "Validation Error",
+  //         "Planned End Date cannot be later than Start Date!"
+  //       );
+  //       errors.PlannedEndDate = true;
+  //     }
+  //   }
+
+  //   setErrorMessage(errors);
+
+  //   if (Object.keys(errors).length === 0) {
+  //     generateJson();
+  //   }
+  // };
+
   const Validation = () => {
     let errors: { [key: string]: boolean } = {};
 
@@ -368,6 +427,8 @@ const ProjectFormPage = (props: any) => {
       errors.BillingContactName = true;
     if (!isValidField("BillingContactEmail", formData?.BillingContactEmail))
       errors.BillingContactEmail = true;
+
+    //Start/End Date validation
     if (formData?.StartDate && formData?.PlannedEndDate) {
       const start = formData.StartDate;
       const end = formData.PlannedEndDate;
@@ -381,11 +442,26 @@ const ProjectFormPage = (props: any) => {
       }
     }
 
+    //Set all field errors
     setErrorMessage(errors);
 
-    if (Object.keys(errors).length === 0) {
-      generateJson();
+    if (Object.keys(errors).length > 0) return;
+
+    if (
+      formData?.BillingModel !== "" &&
+      (!billingsListData || billingsListData.length === 0) &&
+      (billingsData.length === 0 || !billingsData)
+    ) {
+      props.Notify(
+        "error",
+        "Validation Error",
+        "Please add at least one billing entry before saving!"
+      );
+      return; // stop save
     }
+
+    //All validations passed
+    generateJson();
   };
 
   //Json Generations:
@@ -472,7 +548,7 @@ const ProjectFormPage = (props: any) => {
         }
       }
 
-      props.Notify("success", "Success", "Details updated successfully");
+      props.Notify("success", "Success", "Project updated successfully");
       setLoader(false);
       emptyDatas();
       setIsApproval({
@@ -552,6 +628,7 @@ const ProjectFormPage = (props: any) => {
         for (const bill of billingsData) {
           const billingJson = {
             ...bill,
+            ID: null,
             ProjectId: projectId,
           };
           try {
@@ -580,9 +657,9 @@ const ProjectFormPage = (props: any) => {
               user?.email?.toLowerCase() ===
               props?.loginUserEmail?.toLowerCase()
           )
-          ? "Details added successfully. Now click Send Approval button"
+          ? "project added successfully"
           : props?.isAdd
-          ? "Details added successfully"
+          ? "Project added successfully"
           : ""
       );
 
@@ -641,7 +718,18 @@ const ProjectFormPage = (props: any) => {
       RequestJSON: currentJson,
     })
       .then(() => {
-        props.Notify("success", "Success", `Details added successfully`);
+        let message = "";
+        if (status === "6") {
+          message = "Project Approved Successfully";
+        } else if (status === "3") {
+          message = "Project Updated Successfully!";
+        } else if (status === "4" || status === "5") {
+          message = "Project Rejected Successfully";
+        } else {
+          message = "Project Updated Successfully";
+        }
+
+        props.Notify("success", "Success", message);
         emptyDatas();
       })
       .catch((err) => {
@@ -650,34 +738,126 @@ const ProjectFormPage = (props: any) => {
   };
 
   //Handle File Selection:
+  // const handleFileSelection = async (e, files, setFiles, Config) => {
+  //   try {
+  //     const allowedExtensions = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
+  //     const maxTotalSize = 10 * 1024 * 1024; // 10 MB in bytes
+
+  //     const selectedFiles = e.files;
+  //     let totalSize = files.reduce((sum, f) => sum + f.size, 0);
+
+  //     const invalidFiles = selectedFiles.filter((file) => {
+  //       const ext = file.name.split(".").pop().toLowerCase();
+  //       return !allowedExtensions.includes(ext);
+  //     });
+
+  //     if (invalidFiles.length > 0) {
+  //       props.Notify(
+  //         "warn",
+  //         "Invalid File Type",
+  //         "Only PDF, Word, JPG, and PNG files are allowed!"
+  //       );
+  //       return; // Stop further processing
+  //     }
+
+  //     // Calculate total size after adding new files
+  //     totalSize += selectedFiles.reduce((sum, f) => sum + f.size, 0);
+
+  //     if (totalSize > maxTotalSize) {
+  //       props.Notify(
+  //         "error",
+  //         "File Size Limit Exceeded",
+  //         "Total file size cannot exceed 10 MB!"
+  //       );
+  //       return;
+  //     }
+
+  //     // Check for duplicate file names in SharePoint library and current state
+  //     const existingSPFiles = await sp.web.lists
+  //       .getByTitle(Config?.LibraryNames?.ProjectFiles)
+  //       .items.select("FileLeafRef")
+  //       .filter(`IsDelete eq false`)
+  //       .get();
+
+  //     const spFileNames = existingSPFiles.map((file) => file.FileLeafRef);
+
+  //     const duplicatesInSP = e.files.filter((newFile) =>
+  //       spFileNames.includes(newFile.name)
+  //     );
+
+  //     const duplicatesInState = e.files.filter((newFile) =>
+  //       files.some((existing) => existing.name === newFile.name)
+  //     );
+
+  //     const totalDuplicates = [...duplicatesInSP, ...duplicatesInState];
+
+  //     const newFiles = e.files.filter(
+  //       (newFile) =>
+  //         !spFileNames.includes(newFile.name) &&
+  //         !files.some((existing) => existing.name === newFile.name)
+  //     );
+
+  //     if (totalDuplicates.length > 0) {
+  //       props.Notify("info", "Info", "Some file names already exist!");
+  //     }
+
+  //     if (newFiles.length > 0) {
+  //       setFiles([...files, ...newFiles]);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error in file selection:", error);
+  //   }
+  // };
   const handleFileSelection = async (e, files, setFiles, Config) => {
     try {
-      const existingSPFiles = await sp.web.lists
-        .getByTitle(Config?.LibraryNames?.ProjectFiles)
-        .items.select("FileLeafRef")
-        .filter(`IsDelete eq false`)
-        .get();
+      const allowedExtensions = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
+      const maxTotalSize = 10 * 1024 * 1024; // 10 MB
 
-      const spFileNames = existingSPFiles.map((file) => file.FileLeafRef);
+      const selectedFiles = e.files;
+      let totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
-      const duplicatesInSP = e.files.filter((newFile) =>
-        spFileNames.includes(newFile.name)
-      );
+      //Validate file extensions
+      const invalidFiles = selectedFiles.filter((file) => {
+        const ext = file.name.split(".").pop().toLowerCase();
+        return !allowedExtensions.includes(ext);
+      });
 
-      const duplicatesInState = e.files.filter((newFile) =>
+      if (invalidFiles.length > 0) {
+        props.Notify(
+          "warn",
+          "Invalid File Type",
+          "Only PDF, Word, JPG, and PNG files are allowed!"
+        );
+        return;
+      }
+
+      //Calculate total size after adding new files
+      totalSize += selectedFiles.reduce((sum, f) => sum + f.size, 0);
+
+      if (totalSize > maxTotalSize) {
+        props.Notify(
+          "error",
+          "File Size Limit Exceeded",
+          "Total file size cannot exceed 10 MB!"
+        );
+        return;
+      }
+
+      //Check only duplicate names in current state (not in SP)
+      const duplicatesInState = selectedFiles.filter((newFile) =>
         files.some((existing) => existing.name === newFile.name)
       );
 
-      const totalDuplicates = [...duplicatesInSP, ...duplicatesInState];
-
-      const newFiles = e.files.filter(
-        (newFile) =>
-          !spFileNames.includes(newFile.name) &&
-          !files.some((existing) => existing.name === newFile.name)
+      const newFiles = selectedFiles.filter(
+        (newFile) => !files.some((existing) => existing.name === newFile.name)
       );
 
-      if (totalDuplicates.length > 0) {
-        props.Notify("info", "Info", "Some file names already exist!");
+      if (duplicatesInState.length > 0) {
+        props.Notify(
+          "info",
+          "Duplicate Files",
+          "Some file names already exist!"
+        );
       }
 
       if (newFiles.length > 0) {
@@ -790,10 +970,10 @@ const ProjectFormPage = (props: any) => {
           <div className={styles.viewFormNavBar}>
             <h2>
               {props?.isAdd
-                ? "Add Projects"
+                ? "Add project"
                 : props?.isEdit
-                ? "Edit Projects"
-                : "View Projects"}
+                ? "Edit project"
+                : "View project"}
             </h2>
           </div>
           <div
@@ -802,7 +982,7 @@ const ProjectFormPage = (props: any) => {
           >
             <div className={selfComponentStyles.firstPage}>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project ID</Label>
+                <Label>Project Id</Label>
                 <InputText
                   onChange={(e) => handleOnChange("ProjectID", e.target.value)}
                   value={
@@ -811,6 +991,36 @@ const ProjectFormPage = (props: any) => {
                       : "Auto generate"
                   }
                   disabled
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Project name</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("ProjectName", e.target.value)
+                  }
+                  value={formData?.ProjectName}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  style={
+                    errorMessage["ProjectName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Account name</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("AccountName", e.target.value)
+                  }
+                  value={formData?.AccountName}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  style={
+                    errorMessage["AccountName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
@@ -829,161 +1039,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Account Name</Label>
-                <InputText
-                  onChange={(e) =>
-                    handleOnChange("AccountName", e.target.value)
-                  }
-                  value={formData?.AccountName}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                  style={
-                    errorMessage["AccountName"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                />
-              </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project Name</Label>
-                <InputText
-                  onChange={(e) =>
-                    handleOnChange("ProjectName", e.target.value)
-                  }
-                  value={formData?.ProjectName}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                  style={
-                    errorMessage["ProjectName"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                />
-              </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Start Date</Label>
-                <DatePicker
-                  value={
-                    formData?.StartDate
-                      ? new Date(formData.StartDate)
-                      : undefined
-                  }
-                  styles={
-                    errorMessage["StartDate"]
-                      ? {
-                          root: {
-                            border: "2px solid #ff0000",
-                            height: "35px",
-                            borderRadius: "4px",
-                          },
-                        }
-                      : DatePickerStyles
-                  }
-                  onSelectDate={(date) => {
-                    handleOnChange("StartDate", date);
-                  }}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                />
-              </div>
-              {isPMOUser ? (
-                <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                  <Label>Attachment</Label>
-                  {!props?.isView ? (
-                    <FileUpload
-                      className="addFileButton"
-                      name="demo[]"
-                      mode="basic"
-                      onSelect={(e) =>
-                        handleFileSelection(e, files, setFiles, Config)
-                      }
-                      url="/api/upload"
-                      auto
-                      multiple
-                      maxFileSize={1000000}
-                      style={{ width: "14%" }}
-                      chooseLabel="Browse"
-                      chooseOptions={{ icon: "pi pi-upload" }}
-                    />
-                  ) : (
-                    ""
-                  )}
-                </div>
-              ) : (
-                ""
-              )}
-              {files.length > 0 && (
-                <ul className="fileContainer">
-                  {files.map((file: any, index) => (
-                    <li className={selfComponentStyles?.fileList} key={index}>
-                      <div className={selfComponentStyles.filNameTag}>
-                        <div
-                          onClick={() => downloadFile(file)}
-                          style={{
-                            cursor: "pointer",
-                          }}
-                          title={file?.name}
-                        >
-                          {file?.name.length > 23
-                            ? `${file?.name.slice(0, 23)}...`
-                            : file?.name}
-                        </div>
-                        {!props?.isView ? (
-                          <div className={selfComponentStyles.filesIconDiv}>
-                            <i
-                              className="pi pi-times"
-                              onClick={() => removeFile(file?.name)}
-                            ></i>
-                          </div>
-                        ) : (
-                          ""
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className={selfComponentStyles.secondPage}>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Billing Contact Name</Label>
-                <InputText
-                  onChange={(e) =>
-                    handleOnChange("BillingContactName", e.target.value)
-                  }
-                  value={formData?.BillingContactName}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                  style={
-                    errorMessage["BillingContactName"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                />
-              </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Planned End Date</Label>
-                <DatePicker
-                  value={
-                    formData?.PlannedEndDate
-                      ? new Date(formData?.PlannedEndDate)
-                      : undefined
-                  }
-                  styles={
-                    errorMessage["PlannedEndDate"]
-                      ? {
-                          root: {
-                            border: "2px solid #ff0000",
-                            height: "35px",
-                            borderRadius: "4px",
-                          },
-                        }
-                      : DatePickerStyles
-                  }
-                  onSelectDate={(date) => {
-                    handleOnChange("PlannedEndDate", date);
-                  }}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                />
-              </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project Manager</Label>
+                <Label>Project manager</Label>
                 <div
                   className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
                 >
@@ -997,9 +1053,6 @@ const ProjectFormPage = (props: any) => {
                     placeholder="Select the Person"
                     personSelectionLimit={1}
                     context={ConfigureationData.context}
-                    // defaultSelectedUsers={getSelectedEmails(
-                    //   props?.data?.ProjectManager
-                    // )}
                     defaultSelectedUsers={getSelectedEmails(
                       props?.data?.ProjectManager,
                       formData?.ProjectManager
@@ -1017,92 +1070,71 @@ const ProjectFormPage = (props: any) => {
                   />
                 </div>
               </div>
+
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project Status</Label>
-                <Dropdown
-                  options={
-                    props?.initialCRMProjectsListDropContainer?.projectStaus
-                  }
-                  optionLabel="name"
-                  value={props?.initialCRMProjectsListDropContainer?.projectStaus.find(
-                    (item) =>
-                      item.name ===
-                      (Config.projectStatusMap[formData?.ProjectStatus] ||
-                        formData?.ProjectStatus)
-                  )}
-                  onChange={(e) =>
-                    handleOnChange("ProjectStatus", e?.value?.name)
-                  }
-                  disabled
-                  style={
-                    errorMessage["ProjectStatus"]
-                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
-                      : undefined
-                  }
-                />
+                {files.length > 0 || isPMOUser ? <Label>Attachment</Label> : ""}
+                {!props?.isView && isPMOUser ? (
+                  <>
+                    <FileUpload
+                      className="addFileButton"
+                      name="demo[]"
+                      mode="basic"
+                      onSelect={(e) =>
+                        handleFileSelection(e, files, setFiles, Config)
+                      }
+                      url="/api/upload"
+                      auto
+                      multiple
+                      maxFileSize={1000000}
+                      style={{ width: "14%" }}
+                      chooseLabel="Browse"
+                      chooseOptions={{ icon: "pi pi-upload" }}
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    />
+                    {/* <span style={{ fontSize: "12px" }}>
+                      Attachment can only be allowed up to 10 MB.
+                    </span> */}
+                  </>
+                ) : (
+                  ""
+                )}
               </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Billing Model</Label>
-                <Dropdown
-                  options={
-                    props?.initialCRMProjectsListDropContainer?.BillingModel
-                  }
-                  optionLabel="name"
-                  value={props?.initialCRMProjectsListDropContainer?.BillingModel.find(
-                    (item) => item.name === formData?.BillingModel
-                  )}
-                  onChange={(e) =>
-                    handleOnChange("BillingModel", e?.value?.name)
-                  }
-                  disabled={
-                    props?.isView ||
-                    billingsData?.length > 0 ||
-                    billingsListData?.length > 0 ||
-                    isProjectManager ||
-                    isDeliveryHead
-                  }
-                  style={
-                    errorMessage["BillingModel"]
-                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
-                      : undefined
-                  }
-                />
-              </div>
+
+              {files.length > 0 && (
+                <ul className="fileContainer">
+                  {files.map((file: any, index) => (
+                    <li className={selfComponentStyles?.fileList} key={index}>
+                      <div className={selfComponentStyles.filNameTag}>
+                        <div
+                          onClick={() => downloadFile(file)}
+                          style={{
+                            cursor: "pointer",
+                          }}
+                          title={file?.name}
+                        >
+                          {file?.name.length > 23
+                            ? `${file?.name.slice(0, 23)}...`
+                            : file?.name}
+                        </div>
+                        {!props?.isView && isPMOUser ? (
+                          <div className={selfComponentStyles.filesIconDiv}>
+                            <i
+                              className="pi pi-times"
+                              onClick={() => removeFile(file?.name)}
+                            ></i>
+                          </div>
+                        ) : (
+                          ""
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <div className={selfComponentStyles.thirdPage}>
+            <div className={selfComponentStyles.secondPage}>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Billing Contact Email</Label>
-                <InputText
-                  onChange={(e) =>
-                    handleOnChange("BillingContactEmail", e.target.value)
-                  }
-                  value={formData?.BillingContactEmail}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                  style={
-                    errorMessage["BillingContactEmail"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
-                  }
-                  placeholder="e.g., abc@gmail.com"
-                />
-              </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Billing Contact Mobile</Label>
-                <InputText
-                  keyfilter="int"
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // allow only digits, and restrict length between 2–16
-                    if (/^\d{0,16}$/.test(value)) {
-                      handleOnChange("BillingContactMobile", value);
-                    }
-                  }}
-                  value={formData?.BillingContactMobile}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
-                />
-              </div>
-              <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Delivery Head</Label>
+                <Label>Delivery head</Label>
                 <div
                   className={`${selfComponentStyles.textField} ${selfComponentStyles.peoplePicker}`}
                 >
@@ -1154,7 +1186,157 @@ const ProjectFormPage = (props: any) => {
                 </div>
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Billing Address</Label>
+                <Label>Start date</Label>
+                <DatePicker
+                  value={
+                    formData?.StartDate
+                      ? new Date(formData.StartDate)
+                      : undefined
+                  }
+                  styles={
+                    errorMessage["StartDate"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  onSelectDate={(date) => {
+                    handleOnChange("StartDate", date);
+                  }}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Planned end date</Label>
+                <DatePicker
+                  value={
+                    formData?.PlannedEndDate
+                      ? new Date(formData?.PlannedEndDate)
+                      : undefined
+                  }
+                  styles={
+                    errorMessage["PlannedEndDate"]
+                      ? {
+                          root: {
+                            border: "2px solid #ff0000",
+                            height: "35px",
+                            borderRadius: "4px",
+                          },
+                        }
+                      : DatePickerStyles
+                  }
+                  onSelectDate={(date) => {
+                    handleOnChange("PlannedEndDate", date);
+                  }}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Project status</Label>
+                <Dropdown
+                  options={
+                    props?.initialCRMProjectsListDropContainer?.projectStaus
+                  }
+                  optionLabel="name"
+                  value={props?.initialCRMProjectsListDropContainer?.projectStaus.find(
+                    (item) =>
+                      item.name ===
+                      (Config.projectStatusMap[formData?.ProjectStatus] ||
+                        formData?.ProjectStatus)
+                  )}
+                  onChange={(e) =>
+                    handleOnChange("ProjectStatus", e?.value?.name)
+                  }
+                  disabled
+                  style={
+                    errorMessage["ProjectStatus"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Billing model</Label>
+                <Dropdown
+                  options={
+                    props?.initialCRMProjectsListDropContainer?.BillingModel
+                  }
+                  optionLabel="name"
+                  value={props?.initialCRMProjectsListDropContainer?.BillingModel.find(
+                    (item) => item.name === formData?.BillingModel
+                  )}
+                  onChange={(e) =>
+                    handleOnChange("BillingModel", e?.value?.name)
+                  }
+                  disabled={
+                    props?.isView ||
+                    billingsData?.length > 0 ||
+                    billingsListData?.length > 0 ||
+                    isProjectManager ||
+                    isDeliveryHead
+                  }
+                  style={
+                    errorMessage["BillingModel"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
+            <div className={selfComponentStyles.thirdPage}>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Billing contact name</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("BillingContactName", e.target.value)
+                  }
+                  value={formData?.BillingContactName}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  style={
+                    errorMessage["BillingContactName"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Billing contact email</Label>
+                <InputText
+                  onChange={(e) =>
+                    handleOnChange("BillingContactEmail", e.target.value)
+                  }
+                  value={formData?.BillingContactEmail}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  style={
+                    errorMessage["BillingContactEmail"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  placeholder="e.g., abc@gmail.com"
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Billing contact mobile</Label>
+                <InputText
+                  keyfilter="int"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // allow only digits, and restrict length between 2–16
+                    if (/^\d{0,16}$/.test(value)) {
+                      handleOnChange("BillingContactMobile", value);
+                    }
+                  }}
+                  value={formData?.BillingContactMobile}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                />
+              </div>
+
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Billing address</Label>
                 <InputTextarea
                   onChange={(e) =>
                     handleOnChange("BillingAddress", e.target.value)
@@ -1226,7 +1408,10 @@ const ProjectFormPage = (props: any) => {
               props?.isEdit && (
                 <PrimaryButton
                   onClick={() => {
-                    handleApprovalFunc();
+                    setIsSendApproveModal((pre) => ({
+                      ...pre,
+                      isOpen: true,
+                    }));
                   }}
                   style={{ borderRadius: "5px" }}
                 >
@@ -1242,13 +1427,13 @@ const ProjectFormPage = (props: any) => {
                 <>
                   <PrimaryButton
                     onClick={() => {
-                      if (isProjectManager) {
-                        handleStatusUpdate("3");
-                      } else {
-                        handleStatusUpdate("6");
-                      }
+                      setIsDelModal((pre) => ({
+                        ...pre,
+                        isOpen: true,
+                      }));
                     }}
                     style={{ borderRadius: "5px" }}
+                    className={styles.updateBtn}
                   >
                     Approve
                   </PrimaryButton>
@@ -1310,6 +1495,67 @@ const ProjectFormPage = (props: any) => {
           </PrimaryButton>
         </div>
       </Dialog>
+      {/*Approve button modal popup........................................................*/}
+      <Modal isOpen={isDelModal.isOpen} styles={Config.delModalStyle}>
+        <p className={styles.delmsg}>
+          Are you sure, you want to approve this project?
+        </p>
+        <div className={styles.modalBtnSec}>
+          <PrimaryButton
+            text="No"
+            className={styles.cancelBtn}
+            onClick={() => {
+              setIsDelModal({ isOpen: false, Id: null });
+            }}
+          />
+          <PrimaryButton
+            text="Yes"
+            className={styles.addBtn}
+            onClick={() => {
+              setIsDelModal((pre) => ({
+                ...pre,
+                isOpen: false,
+              }));
+              if (isProjectManager) {
+                handleStatusUpdate("3");
+              } else {
+                handleStatusUpdate("6");
+              }
+            }}
+          />
+        </div>
+      </Modal>
+
+      {/*Send approval button modal popup........................................................*/}
+      <Modal isOpen={isSendApproveModal.isOpen} styles={Config.delModalStyle}>
+        <p className={styles.delmsg}>
+          Are you sure, you want to{" "}
+          {formData?.ProjectStatus === "4" || formData?.ProjectStatus === "5"
+            ? "Resubmit"
+            : "Send approval"}{" "}
+          this project?
+        </p>
+        <div className={styles.modalBtnSec}>
+          <PrimaryButton
+            text="No"
+            className={styles.cancelBtn}
+            onClick={() => {
+              setIsSendApproveModal({ isOpen: false, Id: null });
+            }}
+          />
+          <PrimaryButton
+            text="Yes"
+            className={styles.addBtn}
+            onClick={() => {
+              setIsSendApproveModal((pre) => ({
+                ...pre,
+                isOpen: false,
+              }));
+              handleApprovalFunc();
+            }}
+          />
+        </div>
+      </Modal>
     </>
   );
 };

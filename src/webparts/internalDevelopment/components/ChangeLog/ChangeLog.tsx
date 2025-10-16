@@ -234,7 +234,7 @@ const ChangeLog = ({
           className="modal-template change-log-modal"
           header={
             <div className="modal-header">
-              <h4 style={{ fontSize: 18, fontWeight: 600 }}>Audit Logs</h4>
+              <h4 style={{ fontSize: 18, fontWeight: 600 }}>Audit logs</h4>
             </div>
           }
           draggable={false}
@@ -277,17 +277,7 @@ const ChangeLog = ({
                       width: "10%",
                     }}
                   >
-                    Version No
-                  </div>
-                  <div
-                    style={{
-                      color: "#0a1b39",
-                      fontSize: "0.80rem",
-                      fontWeight: "600",
-                      width: "50%",
-                    }}
-                  >
-                    Field Changes
+                    Version no
                   </div>
                   <div
                     style={{
@@ -297,7 +287,7 @@ const ChangeLog = ({
                       width: "25%",
                     }}
                   >
-                    Modified By
+                    Modified by
                   </div>
                   <div
                     style={{
@@ -307,7 +297,17 @@ const ChangeLog = ({
                       width: "15%",
                     }}
                   >
-                    Date and Time
+                    Date and time
+                  </div>
+                  <div
+                    style={{
+                      color: "#0a1b39",
+                      fontSize: "0.80rem",
+                      fontWeight: "600",
+                      width: "50%",
+                    }}
+                  >
+                    Field changes
                   </div>
                 </div>
                 <div style={{ maxHeight: "450px" }}>
@@ -332,6 +332,38 @@ const ChangeLog = ({
                           }}
                         >
                           {val?.Version}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.80rem",
+                            width: "24%",
+                          }}
+                        >
+                          <div
+                            style={{ display: "flex", alignItems: "center" }}
+                          >
+                            <img
+                              src={`/_layouts/15/userphoto.aspx?size=S&accountname=${val.ModifiedByEmail}`}
+                              alt="wait"
+                              style={{
+                                marginRight: 10,
+                                width: 30,
+                                height: 30,
+                                borderRadius: "50%",
+                                objectFit: "fill",
+                              }}
+                            ></img>
+                            <div>{val?.ModifiedBy}</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: "0.80rem", width: "16%" }}>
+                          <span style={{ color: "#03787c" }}>
+                            {val?.Modified
+                              ? moment(val?.Modified).format(
+                                  "MM/DD/YYYY hh:mm:ss A"
+                                )
+                              : ""}
+                          </span>
                         </div>
                         <div style={{ width: "49%" }}>
                           <div>
@@ -373,39 +405,6 @@ const ChangeLog = ({
                               );
                             })}
                           </div>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.80rem",
-                            width: "24%",
-                          }}
-                        >
-                          <div
-                            style={{ display: "flex", alignItems: "center" }}
-                          >
-                            <img
-                              src={`/_layouts/15/userphoto.aspx?size=S&accountname=${val.ModifiedByEmail}`}
-                              alt="wait"
-                              style={{
-                                marginRight: 10,
-                                width: 30,
-                                height: 30,
-                                borderRadius: "50%",
-                                objectFit: "fill",
-                              }}
-                            ></img>
-                            <div>{val?.ModifiedBy}</div>
-                          </div>
-                        </div>
-
-                        <div style={{ fontSize: "0.80rem", width: "16%" }}>
-                          <span style={{ color: "#03787c" }}>
-                            {val?.Modified
-                              ? moment(val?.Modified).format(
-                                  "MM/DD/YYYY hh:mm:ss A"
-                                )
-                              : ""}
-                          </span>
                         </div>
                       </div>
                     );
