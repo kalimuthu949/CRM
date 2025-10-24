@@ -19,6 +19,9 @@ export interface IProjectData {
   DeliveryHead: IPeoplePickerDetails[];
   ProjectStatus: string;
   BillingModel: string;
+  Budget: number;
+  Hours: string;
+  Currency: string;
   BillingContactName: string;
   BillingContactEmail: string;
   BillingContactMobile: string;
@@ -33,6 +36,7 @@ export interface IBasicDropDown {
 export interface ICRMProjectsListDrop {
   projectStaus: IBasicDropDown[];
   BillingModel: IBasicDropDown[];
+  Currency: IBasicDropDown[];
 }
 
 export interface ICRMBillingsListDrop {
@@ -53,6 +57,7 @@ export interface IBillingsDetails {
   MileStoneDescription: string;
   DueDate: string;
   Amount: null;
+  TMAmount: null;
   Status: string;
   ReminderDaysBeforeDue: string;
   Notes: string;

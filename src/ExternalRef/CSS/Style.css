@@ -408,6 +408,11 @@ h4 {
   height: calc(100vh - 320px) !important;
 }
 
+.tableDatas .p-datatable > .p-datatable-wrapper {
+  overflow: auto;
+  height: auto !important;
+}
+
 .accountChildTable .p-datatable > .p-datatable-wrapper {
   overflow: auto;
   height: auto !important;
@@ -524,7 +529,6 @@ h4 {
   .tableData .p-datatable > .p-datatable-wrapper {
     height: calc(100vh - 400px) !important;
   }
-
   .accountChildTable .p-datatable > .p-datatable-wrapper {
     overflow: auto;
   }

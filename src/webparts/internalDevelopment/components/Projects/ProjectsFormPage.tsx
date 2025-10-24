@@ -340,10 +340,27 @@ const ProjectFormPage = (props: any) => {
 
       case "ProjectStatus":
       case "BillingModel":
+      case "Currency":
       case "AccountName":
+      case "Budget":
       case "ProjectName":
       case "BillingContactName":
         return value && typeof value === "string" && value.trim() !== "";
+
+      case "Hours":
+        if (value) {
+          const regex = /^([0-9]+)(:[0-9]{1,2})?$/;
+          const match = value.match(regex);
+          if (match) {
+            const parts = value.split(":");
+            if (parts.length === 2) {
+              const minutes = Number(parts[1]);
+              return minutes >= 0 && minutes < 60;
+            }
+            return true;
+          }
+        }
+        return false;
 
       case "BillingContactEmail": {
         // Email regex
@@ -359,49 +376,6 @@ const ProjectFormPage = (props: any) => {
         return true;
     }
   };
-  // const Validation = () => {
-  //   let errors: { [key: string]: boolean } = {};
-
-  //   if (!isValidField("ProjectManager", formData?.ProjectManager))
-  //     errors.ProjectManager = true;
-  //   if (!isValidField("DeliveryHead", formData?.DeliveryHead))
-  //     errors.DeliveryHead = true;
-  //   if (!isValidField("Lead", formData?.Lead)) errors.Lead = true;
-  //   if (!isValidField("AccountName", formData?.AccountName))
-  //     errors.AccountName = true;
-  //   if (!isValidField("ProjectName", formData?.ProjectName))
-  //     errors.ProjectName = true;
-  //   if (!isValidField("StartDate", formData?.StartDate))
-  //     errors.StartDate = true;
-  //   if (!isValidField("PlannedEndDate", formData?.PlannedEndDate))
-  //     errors.PlannedEndDate = true;
-  //   if (!isValidField("ProjectStatus", formData?.ProjectStatus))
-  //     errors.ProjectStatus = true;
-  //   if (!isValidField("BillingModel", formData?.BillingModel))
-  //     errors.BillingModel = true;
-  //   if (!isValidField("BillingContactName", formData?.BillingContactName))
-  //     errors.BillingContactName = true;
-  //   if (!isValidField("BillingContactEmail", formData?.BillingContactEmail))
-  //     errors.BillingContactEmail = true;
-  //   if (formData?.StartDate && formData?.PlannedEndDate) {
-  //     const start = formData.StartDate;
-  //     const end = formData.PlannedEndDate;
-  //     if (end < start) {
-  //       props.Notify(
-  //         "error",
-  //         "Validation Error",
-  //         "Planned End Date cannot be later than Start Date!"
-  //       );
-  //       errors.PlannedEndDate = true;
-  //     }
-  //   }
-
-  //   setErrorMessage(errors);
-
-  //   if (Object.keys(errors).length === 0) {
-  //     generateJson();
-  //   }
-  // };
 
   const Validation = () => {
     let errors: { [key: string]: boolean } = {};
@@ -413,6 +387,7 @@ const ProjectFormPage = (props: any) => {
     if (!isValidField("Lead", formData?.Lead)) errors.Lead = true;
     if (!isValidField("AccountName", formData?.AccountName))
       errors.AccountName = true;
+    if (!isValidField("Budget", formData?.Budget)) errors.Budget = true;
     if (!isValidField("ProjectName", formData?.ProjectName))
       errors.ProjectName = true;
     if (!isValidField("StartDate", formData?.StartDate))
@@ -423,10 +398,12 @@ const ProjectFormPage = (props: any) => {
       errors.ProjectStatus = true;
     if (!isValidField("BillingModel", formData?.BillingModel))
       errors.BillingModel = true;
+    if (!isValidField("Currency", formData?.Currency)) errors.Currency = true;
     if (!isValidField("BillingContactName", formData?.BillingContactName))
       errors.BillingContactName = true;
     if (!isValidField("BillingContactEmail", formData?.BillingContactEmail))
       errors.BillingContactEmail = true;
+    if (!isValidField("Hours", formData?.Hours)) errors.Hours = true;
 
     //Start/End Date validation
     if (formData?.StartDate && formData?.PlannedEndDate) {
@@ -493,6 +470,9 @@ const ProjectFormPage = (props: any) => {
           : Config.projectStatusReverseMap[formData?.ProjectStatus] ||
             formData?.ProjectStatus,
       BillingModel: formData?.BillingModel,
+      Budget: formData?.Budget,
+      Hours: formData?.Hours,
+      Currency: formData?.Currency,
       BillingContactName: formData?.BillingContactName,
       BillingContactEmail: formData?.BillingContactEmail,
       BillingContactMobile: formData?.BillingContactMobile,
@@ -952,6 +932,9 @@ const ProjectFormPage = (props: any) => {
         DeliveryHead: [],
         ProjectStatus: "0",
         BillingModel: "",
+        Hours: "",
+        Budget: "",
+        Currency: "",
         BillingContactName: "",
         BillingContactEmail: "",
         BillingContactMobile: "",
@@ -1286,8 +1269,65 @@ const ProjectFormPage = (props: any) => {
                   }
                 />
               </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Budget</Label>
+                <InputText
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Only allow digits
+                    if (/^\d*$/.test(value)) {
+                      handleOnChange("Budget", value);
+                    }
+                  }}
+                  value={formData?.Budget}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  style={
+                    errorMessage["Budget"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Hours</Label>
+                <InputText
+                  value={formData?.Hours || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Allow only digits and colon
+                    const regex = /^[0-9:]*$/;
+                    if (regex.test(val)) {
+                      handleOnChange("Hours", val);
+                    }
+                  }}
+                  placeholder="Enter Hours (e.g. 90:20)"
+                  style={
+                    errorMessage["Hours"]
+                      ? { border: "2px solid #ff0000" }
+                      : undefined
+                  }
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                />
+              </div>
             </div>
             <div className={selfComponentStyles.thirdPage}>
+              <div className={`${selfComponentStyles.allField} dealFormPage`}>
+                <Label>Currency</Label>
+                <Dropdown
+                  options={props?.initialCRMProjectsListDropContainer?.Currency}
+                  optionLabel="name"
+                  value={props?.initialCRMProjectsListDropContainer?.Currency.find(
+                    (item) => item.name === formData?.Currency
+                  )}
+                  onChange={(e) => handleOnChange("Currency", e?.value?.name)}
+                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  style={
+                    errorMessage["Currency"]
+                      ? { border: "2px solid #ff0000", borderRadius: "4px" }
+                      : undefined
+                  }
+                />
+              </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
                 <Label>Billing contact name</Label>
                 <InputText
@@ -1362,6 +1402,7 @@ const ProjectFormPage = (props: any) => {
           {formData.BillingModel && (
             <Billings
               ProjectsFormData={formData}
+              isPMOUser={isPMOUser}
               loginUserEmail={props?.loginUserEmail}
               getBillingsAddDetails={getBillingsAddDetails}
               isAdd={props?.isAdd}

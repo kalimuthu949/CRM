@@ -96,7 +96,6 @@ const Projects = (props: IProps): JSX.Element => {
     ProjectStatus: "",
     BillingModel: "",
   });
-  console.log(filterValues, "filterValues");
   const [
     initialCRMProjectsListDropContainer,
     setinitialCRMProjectsListDropContainer,
@@ -165,6 +164,9 @@ const Projects = (props: IProps): JSX.Element => {
             DeliveryHead: _DeliveryHead ? _DeliveryHead : [],
             ProjectStatus: items?.ProjectStatus,
             BillingModel: items?.BillingModel,
+            Budget: items?.Budget,
+            Hours: items?.Hours,
+            Currency: items?.Currency,
             BillingContactName: items?.BillingContactName,
             BillingContactEmail: items?.BillingContactEmail,
             BillingContactMobile: items?.BillingContactMobile,
@@ -267,9 +269,32 @@ const Projects = (props: IProps): JSX.Element => {
                 BillingModel: tempBillingModel,
               })
             );
-            setLoader(false);
-            getPMOGroupUsers();
-            getBillingsListDetails();
+            SPServices.SPGetChoices({
+              Listname: Config.ListNames.CRMProjects,
+              FieldName: "Currency",
+            })
+              .then((res: any) => {
+                let tempCurrency: IBasicDropDown[] = [];
+                if (res?.Choices?.length) {
+                  res?.Choices?.forEach((val: any) => {
+                    tempCurrency.push({
+                      name: val,
+                    });
+                  });
+                }
+                setinitialCRMProjectsListDropContainer(
+                  (prev: ICRMProjectsListDrop) => ({
+                    ...prev,
+                    Currency: tempCurrency,
+                  })
+                );
+                setLoader(false);
+                getPMOGroupUsers();
+                getBillingsListDetails();
+              })
+              .catch((err) => {
+                console.log(err, "Get choice error from CRMProjects list");
+              });
           })
           .catch((err) => {
             console.log(err, "Get choice error from CRMProjects list");
@@ -557,7 +582,8 @@ const Projects = (props: IProps): JSX.Element => {
           (rowData?.ProjectStatus == "6" &&
             billingsDetails?.some(
               (bill: any) =>
-                bill?.ProjectId === rowData?.ID && bill?.Status == "0"
+                bill?.ProjectId === rowData?.ID &&
+                (bill?.Status == "0" || bill?.Status == "4")
             )))) ||
       (rowData?.DeliveryHead?.some(
         (pm: IPeoplePickerDetails) =>
@@ -834,6 +860,9 @@ const Projects = (props: IProps): JSX.Element => {
                 field="BillingModel"
                 header="Billing model"
               ></Column>
+              <Column sortable field="Budget" header="Budget"></Column>
+              <Column sortable field="Hours" header="Hours"></Column>
+              <Column sortable field="Currency" header="Currency"></Column>
               <Column
                 field="Action"
                 header="Actions"

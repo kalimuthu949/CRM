@@ -29,6 +29,7 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
+  console.log(props?.data?.BillingModel, "billings props");
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
   const BillingModel: string = props?.BillingModel;
@@ -42,7 +43,6 @@ const Billings = (props: any) => {
   const [billingsDetails, setBillingDetails] = React.useState<
     IBillingsDetails[]
   >([]);
-  console.log(billingsDetails, "billingsDetails in billing.tsx");
   const [masterBillingsDetails, setMasterBillingDetails] = React.useState<
     IBillingsDetails[]
   >([]);
@@ -55,11 +55,11 @@ const Billings = (props: any) => {
     isOpen: false,
     Id: null,
   });
-  const [isInvoiceRaiseModal, setIsInvoiceRaiseModal] =
-    React.useState<IDelModal>({
-      isOpen: false,
-      Id: null,
-    });
+  const [isInvoiceRaiseModal, setIsInvoiceRaiseModal] = React.useState<any>({
+    isOpen: false,
+    Id: null,
+    hours: "",
+  });
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [loader, setLoader] = React.useState<boolean>(false);
   const [isFormModalOpen, setIsFormModalOpen] = React.useState(false);
@@ -94,6 +94,7 @@ const Billings = (props: any) => {
             MileStoneDescription: items?.MileStoneDescription,
             DueDate: items?.DueDate,
             Amount: items?.Amount,
+            TMAmount: items?.TMAmount,
             Status: items?.Status,
             ReminderDaysBeforeDue: items?.ReminderDaysBeforeDue
               ? items?.ReminderDaysBeforeDue
@@ -275,7 +276,8 @@ const Billings = (props: any) => {
               </div>
               {!props?.isView &&
               !props?.isDeliveryHead &&
-              props?.data?.ProjectStatus !== "6" ? (
+              props?.data?.ProjectStatus !== "6" &&
+              props?.isPMOUser ? (
                 <div className={styles.btnAndText}>
                   <div
                     onClick={() => openForm("add")}
@@ -295,7 +297,7 @@ const Billings = (props: any) => {
             </div>
           </div>
           <div
-            className={`${styles.tableData} tableData
+            className={`${styles.tableData} tableData tableDatas
                     ${
                       ScreenWidth >= 1536
                         ? "data_table_1536"
@@ -421,7 +423,13 @@ const Billings = (props: any) => {
                   body={(rowData: IBillingsDetails) => {
                     return (
                       <div className={styles.Actions}>
-                        {props?.ProjectsFormData?.ProjectStatus !== "6" && (
+                        {props?.ProjectsFormData?.ProjectStatus !== "6" ||
+                        (props?.data?.ProjectManager?.some(
+                          (user: any) => user?.email == props?.loginUserEmail
+                        ) &&
+                          props?.data?.BillingModel == "T&M" &&
+                          (rowData?.Status == "0" ||
+                            rowData?.Status == "4")) ? (
                           <>
                             <div
                               onClick={(e) => {
@@ -435,22 +443,28 @@ const Billings = (props: any) => {
                                 alt="no image"
                               ></img>
                             </div>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsDelModal({
-                                  Id: rowData?.ID,
-                                  isOpen: true,
-                                });
-                              }}
-                            >
-                              <img
-                                title="Delete"
-                                src={DeleteImage}
-                                alt="no image"
-                              ></img>
-                            </div>
+                            {props?.isPMOUser ? (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsDelModal({
+                                    Id: rowData?.ID,
+                                    isOpen: true,
+                                  });
+                                }}
+                              >
+                                <img
+                                  title="Delete"
+                                  src={DeleteImage}
+                                  alt="no image"
+                                ></img>
+                              </div>
+                            ) : (
+                              ""
+                            )}
                           </>
+                        ) : (
+                          ""
                         )}
                         {(props?.data?.ProjectStatus == "6" &&
                           props?.data?.ProjectManager?.some(
@@ -469,6 +483,7 @@ const Billings = (props: any) => {
                               setIsInvoiceRaiseModal({
                                 Id: rowData?.ID,
                                 isOpen: true,
+                                hours: rowData?.Hours ? rowData?.Hours : "",
                               });
                             }}
                           >
@@ -546,14 +561,16 @@ const Billings = (props: any) => {
       {/*Invoice trigger Model popup...................................................*/}
       <Modal isOpen={isInvoiceRaiseModal.isOpen} styles={Config.delModalStyle}>
         <p className={styles.delmsg}>
-          Are you sure you want to raise an invoice for this milestone?
+          {props?.data?.BillingModel == "T&M"
+            ? `According to your T&M, the total hours are ${isInvoiceRaiseModal.hours}. Do you want to raise an invoice for this milestone?`
+            : "Are you sure you want to raise an invoice for this milestone?"}
         </p>
         <div className={styles.modalBtnSec}>
           <PrimaryButton
             text="No"
             className={styles.cancelBtn}
             onClick={() => {
-              setIsInvoiceRaiseModal({ isOpen: false, Id: null });
+              setIsInvoiceRaiseModal({ isOpen: false, Id: null, hours: "" });
             }}
           />
           <PrimaryButton
