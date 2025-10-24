@@ -267,6 +267,7 @@ const BillingsForm = (props: any) => {
       ProjectId: props?.selectedProjectsData?.ID,
       Rate: formData?.Rate ? formData?.Rate : 0,
       Hours: formData?.Hours ? formData?.Hours : "",
+      TMAmount: formData?.TMAmount ? formData?.TMAmount : 0,
       ReminderDaysBeforeDue: formData?.ReminderDaysBeforeDue
         ? formData?.ReminderDaysBeforeDue
         : "",
@@ -370,6 +371,7 @@ const BillingsForm = (props: any) => {
     if (!props?.selectedCRMBillingsRowData) {
       setFormData({
         Amount: null,
+        TMAmount: null,
         BillingFrequency: "",
         Currency: "",
         DueDate: null,
@@ -591,9 +593,32 @@ const BillingsForm = (props: any) => {
                     <Label>Rate</Label>
                     <InputText
                       value={formData?.Rate}
+                      // onChange={(e) => {
+                      //   const onlyNumbers = e.target.value.replace(/\D/g, "");
+                      //   handleOnChange("Rate", onlyNumbers);
+                      // }}
                       onChange={(e) => {
                         const onlyNumbers = e.target.value.replace(/\D/g, "");
                         handleOnChange("Rate", onlyNumbers);
+
+                        // check both fields
+                        const hoursVal = formData?.Hours || "";
+                        if (onlyNumbers && hoursVal) {
+                          let totalHours = 0;
+                          if (hoursVal.includes(":")) {
+                            const [h, m] = hoursVal.split(":").map(Number);
+                            totalHours = h + (m ? m / 60 : 0);
+                          } else {
+                            totalHours = parseFloat(hoursVal);
+                          }
+
+                          const amount = (
+                            parseFloat(onlyNumbers) * totalHours
+                          ).toFixed(2);
+                          handleOnChange("TMAmount", amount);
+                        } else {
+                          handleOnChange("TMAmount", "");
+                        }
                       }}
                       placeholder="Enter Rate"
                       style={
@@ -608,12 +633,38 @@ const BillingsForm = (props: any) => {
                     <Label>Hours</Label>
                     <InputText
                       value={formData?.Hours || ""}
+                      // onChange={(e) => {
+                      //   const val = e.target.value;
+                      //   // Allow only digits and colon
+                      //   const regex = /^[0-9:]*$/;
+                      //   if (regex.test(val)) {
+                      //     handleOnChange("Hours", val);
+                      //   }
+                      // }}
                       onChange={(e) => {
                         const val = e.target.value;
-                        // Allow only digits and colon
                         const regex = /^[0-9:]*$/;
                         if (regex.test(val)) {
                           handleOnChange("Hours", val);
+
+                          // check both fields
+                          const rateVal = formData?.Rate || "";
+                          if (rateVal && val) {
+                            let totalHours = 0;
+                            if (val.includes(":")) {
+                              const [h, m] = val.split(":").map(Number);
+                              totalHours = h + (m ? m / 60 : 0);
+                            } else {
+                              totalHours = parseFloat(val);
+                            }
+
+                            const amount = (
+                              parseFloat(rateVal) * totalHours
+                            ).toFixed(2);
+                            handleOnChange("TMAmount", amount);
+                          } else {
+                            handleOnChange("TMAmount", "");
+                          }
                         }
                       }}
                       placeholder="Enter Hours (e.g. 90:20)"
@@ -624,6 +675,10 @@ const BillingsForm = (props: any) => {
                       }
                       disabled={props?.isView}
                     />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Amount</Label>
+                    <InputText value={formData?.TMAmount || ""} disabled />
                   </div>
                 </>
               )}

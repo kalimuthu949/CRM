@@ -41,6 +41,7 @@ export namespace Config {
   export const CRMProjectsDropDown: ICRMProjectsListDrop = {
     projectStaus: [],
     BillingModel: [],
+    Currency: [],
   };
 
   //Initial Modal Config:
@@ -72,6 +73,7 @@ export namespace Config {
     MileStoneDescription: "",
     DueDate: "",
     Amount: null,
+    TMAmount: null,
     Status: "",
     ReminderDaysBeforeDue: "",
     Notes: "",
