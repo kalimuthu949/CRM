@@ -564,20 +564,65 @@ const Projects = (props: IProps): JSX.Element => {
   };
 
   //only edit options shows conditions:
+  // const isEditable = (rowData: IProjectData) => {
+  //   return (
+  //     PMOusers?.some(
+  //       (user) =>
+  //         user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase() &&
+  //         (rowData?.ProjectStatus == "0" ||
+  //           rowData?.ProjectStatus == "4" ||
+  //           rowData?.ProjectStatus == "5" ||
+  //           rowData?.ProjectStatus == "1")
+  //     ) ||
+  //     (rowData?.ProjectManager?.some(
+  //       (pm: IPeoplePickerDetails) =>
+  //         pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+  //     ) &&
+  //       (rowData?.ProjectStatus == "2" ||
+  //         (rowData?.ProjectStatus == "6" &&
+  //           billingsDetails?.some(
+  //             (bill: any) =>
+  //               bill?.ProjectId === rowData?.ID &&
+  //               (bill?.Status == "0" || bill?.Status == "4")
+  //           )))) ||
+  //     (rowData?.DeliveryHead?.some(
+  //       (pm: IPeoplePickerDetails) =>
+  //         pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+  //     ) &&
+  //       rowData?.ProjectStatus == "3")
+  //   );
+  // };
   const isEditable = (rowData: IProjectData) => {
+    const isPMOUser = PMOusers?.some(
+      (user) =>
+        user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+    );
+
+    const isProjectManager = rowData?.ProjectManager?.some(
+      (pm: IPeoplePickerDetails) =>
+        pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+    );
+
+    const isDeliveryHead = rowData?.DeliveryHead?.some(
+      (dh: IPeoplePickerDetails) =>
+        dh?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
+    );
+
     return (
-      PMOusers?.some(
-        (user) =>
-          user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase() &&
-          (rowData?.ProjectStatus == "0" ||
-            rowData?.ProjectStatus == "4" ||
-            rowData?.ProjectStatus == "5" ||
-            rowData?.ProjectStatus == "1")
-      ) ||
-      (rowData?.ProjectManager?.some(
-        (pm: IPeoplePickerDetails) =>
-          pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-      ) &&
+      (isPMOUser &&
+        (rowData?.ProjectStatus == "0" ||
+          rowData?.ProjectStatus == "4" ||
+          rowData?.ProjectStatus == "5" ||
+          rowData?.ProjectStatus == "1")) ||
+      (isPMOUser &&
+        rowData?.ProjectStatus == "6" &&
+        billingsDetails?.some(
+          (bill: any) =>
+            bill?.ProjectId === rowData?.ID &&
+            (bill?.Status == "0" || bill?.Status == "4") &&
+            rowData?.BillingModel == "T&M"
+        )) ||
+      (isProjectManager &&
         (rowData?.ProjectStatus == "2" ||
           (rowData?.ProjectStatus == "6" &&
             billingsDetails?.some(
@@ -585,11 +630,7 @@ const Projects = (props: IProps): JSX.Element => {
                 bill?.ProjectId === rowData?.ID &&
                 (bill?.Status == "0" || bill?.Status == "4")
             )))) ||
-      (rowData?.DeliveryHead?.some(
-        (pm: IPeoplePickerDetails) =>
-          pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-      ) &&
-        rowData?.ProjectStatus == "3")
+      (isDeliveryHead && rowData?.ProjectStatus == "3")
     );
   };
 

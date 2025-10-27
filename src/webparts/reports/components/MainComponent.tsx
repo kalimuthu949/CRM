@@ -127,6 +127,19 @@ const MainComponent = (props: any) => {
           (bill: any) => bill.ProjectId == project.ID
         );
 
+        let receivedAmount = 0;
+        relatedBillings.forEach((billing: any) => {
+          if (billing.Status === "3") {
+            if (project.BillingModel === "Milestone") {
+              receivedAmount += Number(billing.Amount || 0);
+            } else if (project.BillingModel === "FixedMonthly") {
+              receivedAmount += Number(billing.MonthlyAmount || 0);
+            } else if (project.BillingModel === "T&M") {
+              receivedAmount += Number(billing.TMAmount || 0);
+            }
+          }
+        });
+
         if (relatedBillings.length > 0) {
           relatedBillings.forEach((billing: any) => {
             combinedData.push({
@@ -138,15 +151,19 @@ const MainComponent = (props: any) => {
               BillingModel: project.BillingModel,
               StartDate: project.StartDate,
               PlannedEndDate: project.PlannedEndDate,
+              Budget: project?.Budget,
               Remarks: project.Remarks || "",
               BillingMileStone: billing.MileStoneName || "",
               DueDate: billing.DueDate,
               Amount: billing.Amount,
+              TMAmount: billing.TMAmount || "",
+              MonthlyAmount: billing.MonthlyAmount || "",
               InvoiceTrigger: billing.InvoiceTrigger,
               InvoiceID: billing.InvoiceID || "",
               Status: billing.Status,
               Currency: billing.Currency,
               ReminderDaysBeforeDue: billing.ReminderDaysBeforeDue || 7,
+              ReceivedAmount: receivedAmount,
             });
           });
         } else {
@@ -160,15 +177,19 @@ const MainComponent = (props: any) => {
             BillingModel: project.BillingModel,
             StartDate: project.StartDate,
             PlannedEndDate: project.PlannedEndDate,
+            Budget: project?.Budget,
             Remarks: project.Remarks || "",
             BillingMileStone: "",
             DueDate: "",
             Amount: "",
+            TMAmount: "",
+            MonthlyAmount: "",
             InvoiceTrigger: "",
             InvoiceID: "",
             Status: "",
             Currency: "",
             ReminderDaysBeforeDue: "",
+            ReceivedAmount: 0,
           });
         }
       });
@@ -492,7 +513,7 @@ const MainComponent = (props: any) => {
             .includes(searchVal.toLowerCase()) ||
           item?.InvoiceID?.toLowerCase().includes(searchVal.toLowerCase()) ||
           item?.Remarks?.toLowerCase().includes(searchVal.toLowerCase()) ||
-          item?.Amount?.toString()
+          item?.Budget?.toString()
             .toLowerCase()
             .includes(searchVal.toLowerCase()) ||
           item.Currency?.toLowerCase().includes(searchVal.toLowerCase()) ||
@@ -792,7 +813,12 @@ const MainComponent = (props: any) => {
                 }}
               ></Column>
               <Column sortable field="Currency" header="Currency"></Column>
-              <Column sortable field="Amount" header="Amount"></Column>
+              <Column sortable field="Budget" header="Actual Budget"></Column>
+              <Column
+                sortable
+                field="ReceivedAmount"
+                header="Received Amount"
+              ></Column>
               <Column
                 sortable
                 field="InvoiceTrigger"
