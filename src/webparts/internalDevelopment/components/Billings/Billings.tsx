@@ -424,9 +424,10 @@ const Billings = (props: any) => {
                     return (
                       <div className={styles.Actions}>
                         {props?.ProjectsFormData?.ProjectStatus !== "6" ||
-                        (props?.data?.ProjectManager?.some(
+                        ((props?.data?.ProjectManager?.some(
                           (user: any) => user?.email == props?.loginUserEmail
-                        ) &&
+                        ) ||
+                          props?.isPMOUser) &&
                           props?.data?.BillingModel == "T&M" &&
                           (rowData?.Status == "0" ||
                             rowData?.Status == "4")) ? (
@@ -443,7 +444,8 @@ const Billings = (props: any) => {
                                 alt="no image"
                               ></img>
                             </div>
-                            {props?.isPMOUser ? (
+                            {props?.isPMOUser &&
+                            props?.ProjectsFormData?.ProjectStatus !== "6" ? (
                               <div
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -467,15 +469,20 @@ const Billings = (props: any) => {
                           ""
                         )}
                         {(props?.data?.ProjectStatus == "6" &&
-                          props?.data?.ProjectManager?.some(
+                          (props?.data?.ProjectManager?.some(
                             (user: any) => user?.email == props?.loginUserEmail
-                          ) &&
+                          ) ||
+                            props?.isPMOUser) &&
                           rowData?.Status == "0" &&
                           shouldShowInvoiceIcon(
                             rowData?.DueDate,
                             rowData?.ReminderDaysBeforeDue
                           )) ||
-                        rowData?.Status == "4" ? (
+                        ((props?.data?.ProjectManager?.some(
+                          (user: any) => user?.email == props?.loginUserEmail
+                        ) ||
+                          props?.isPMOUser) &&
+                          rowData?.Status == "4") ? (
                           <div
                             onClick={(e) => {
                               e.stopPropagation();

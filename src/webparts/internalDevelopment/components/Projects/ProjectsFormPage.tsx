@@ -46,6 +46,7 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const ProjectFormPage = (props: any) => {
+  console.log(props?.data?.ProjectStatus, "props data in project form page");
   // Local Variables:
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
@@ -983,7 +984,12 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("ProjectName", e.target.value)
                   }
                   value={formData?.ProjectName}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["ProjectName"]
                       ? { border: "2px solid #ff0000" }
@@ -998,7 +1004,12 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("AccountName", e.target.value)
                   }
                   value={formData?.AccountName}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["AccountName"]
                       ? { border: "2px solid #ff0000" }
@@ -1013,7 +1024,12 @@ const ProjectFormPage = (props: any) => {
                   options={leadOptions}
                   optionLabel="name"
                   onChange={(e) => handleOnChange("Lead", e.value)}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["Lead"]
                       ? { border: "2px solid #ff0000" }
@@ -1048,7 +1064,10 @@ const ProjectFormPage = (props: any) => {
                       handleOnChange("ProjectManager", items)
                     }
                     disabled={
-                      props?.isView || isProjectManager || isDeliveryHead
+                      props?.isView ||
+                      isProjectManager ||
+                      isDeliveryHead ||
+                      props?.data?.ProjectStatus == "6"
                     }
                   />
                 </div>
@@ -1163,7 +1182,10 @@ const ProjectFormPage = (props: any) => {
                       }
                     }}
                     disabled={
-                      props?.isView || isProjectManager || isDeliveryHead
+                      props?.isView ||
+                      isProjectManager ||
+                      isDeliveryHead ||
+                      props?.data?.ProjectStatus == "6"
                     }
                   />
                 </div>
@@ -1190,7 +1212,12 @@ const ProjectFormPage = (props: any) => {
                   onSelectDate={(date) => {
                     handleOnChange("StartDate", date);
                   }}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
@@ -1215,7 +1242,12 @@ const ProjectFormPage = (props: any) => {
                   onSelectDate={(date) => {
                     handleOnChange("PlannedEndDate", date);
                   }}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
@@ -1280,7 +1312,12 @@ const ProjectFormPage = (props: any) => {
                     }
                   }}
                   value={formData?.Budget}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["Budget"]
                       ? { border: "2px solid #ff0000" }
@@ -1306,7 +1343,12 @@ const ProjectFormPage = (props: any) => {
                       ? { border: "2px solid #ff0000" }
                       : undefined
                   }
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                 />
               </div>
             </div>
@@ -1320,7 +1362,12 @@ const ProjectFormPage = (props: any) => {
                     (item) => item.name === formData?.Currency
                   )}
                   onChange={(e) => handleOnChange("Currency", e?.value?.name)}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["Currency"]
                       ? { border: "2px solid #ff0000", borderRadius: "4px" }
@@ -1335,7 +1382,12 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingContactName", e.target.value)
                   }
                   value={formData?.BillingContactName}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["BillingContactName"]
                       ? { border: "2px solid #ff0000" }
@@ -1350,7 +1402,12 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingContactEmail", e.target.value)
                   }
                   value={formData?.BillingContactEmail}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   style={
                     errorMessage["BillingContactEmail"]
                       ? { border: "2px solid #ff0000" }
@@ -1371,7 +1428,12 @@ const ProjectFormPage = (props: any) => {
                     }
                   }}
                   value={formData?.BillingContactMobile}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                 />
               </div>
 
@@ -1382,7 +1444,12 @@ const ProjectFormPage = (props: any) => {
                     handleOnChange("BillingAddress", e.target.value)
                   }
                   value={formData?.BillingAddress}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   maxLength={500}
                   autoResize
                 />
@@ -1392,7 +1459,12 @@ const ProjectFormPage = (props: any) => {
                 <InputTextarea
                   onChange={(e) => handleOnChange("Remarks", e.target.value)}
                   value={formData?.Remarks}
-                  disabled={props?.isView || isProjectManager || isDeliveryHead}
+                  disabled={
+                    props?.isView ||
+                    isProjectManager ||
+                    isDeliveryHead ||
+                    props?.data?.ProjectStatus == "6"
+                  }
                   maxLength={500}
                   autoResize
                 />
@@ -1428,7 +1500,9 @@ const ProjectFormPage = (props: any) => {
             >
               Cancel
             </PrimaryButton>
-            {props?.isView == false && isPMOUser ? (
+            {props?.isView == false &&
+            isPMOUser &&
+            props?.data?.ProjectStatus !== "6" ? (
               <PrimaryButton
                 className={styles.updateBtn}
                 iconProps={{ iconName: "Save" }}
