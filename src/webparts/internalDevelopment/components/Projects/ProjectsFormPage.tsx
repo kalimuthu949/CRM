@@ -966,7 +966,7 @@ const ProjectFormPage = (props: any) => {
           >
             <div className={selfComponentStyles.firstPage}>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Project Id</Label>
+                <Label>Project id</Label>
                 <InputText
                   onChange={(e) => handleOnChange("ProjectID", e.target.value)}
                   value={
@@ -1221,7 +1221,7 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Planned end date</Label>
+                <Label>End date</Label>
                 <DatePicker
                   value={
                     formData?.PlannedEndDate
