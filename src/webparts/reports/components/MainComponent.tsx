@@ -81,8 +81,8 @@ const MainComponent = (props: any) => {
       const projectRes: any = await SPServices.SPReadItems({
         Listname: Config.ListNames.CRMProjects,
         Select:
-          "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName",
-        Expand: "ProjectManager,Lead",
+          "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName,DeliveryHead/Id,DeliveryHead/EMail,DeliveryHead/Title",
+        Expand: "ProjectManager,Lead,DeliveryHead",
         Orderby: "Modified",
         Orderbydecorasc: true,
         Filter: [
@@ -123,6 +123,17 @@ const MainComponent = (props: any) => {
           });
         }
 
+        let _DeliverHead: IPeoplePickerDetails[] = [];
+        if (project?.DeliveryHead) {
+          project?.DeliveryHead.forEach((user: any) => {
+            _DeliverHead.push({
+              id: user?.Id,
+              name: user?.Title,
+              email: user?.EMail,
+            });
+          });
+        }
+
         const relatedBillings = billingRes.filter(
           (bill: any) => bill.ProjectId == project.ID
         );
@@ -148,6 +159,7 @@ const MainComponent = (props: any) => {
               AccountName: project.AccountName,
               Lead: project.Lead?.FirstName,
               ProjectManager: _ProjectManager,
+              DeliveryHead: _DeliverHead,
               BillingModel: project.BillingModel,
               StartDate: project.StartDate,
               PlannedEndDate: project.PlannedEndDate,
@@ -174,6 +186,7 @@ const MainComponent = (props: any) => {
             AccountName: project.AccountName,
             Lead: project.Lead?.FirstName,
             ProjectManager: _ProjectManager,
+            DeliverHead: _DeliverHead,
             BillingModel: project.BillingModel,
             StartDate: project.StartDate,
             PlannedEndDate: project.PlannedEndDate,
@@ -266,14 +279,26 @@ const MainComponent = (props: any) => {
     );
   };
 
-  // Milestone Column Template
-  const milestoneTemplate = (rowData: any) => {
+  //Render Delivery head Column function:
+  const renderDeliveryHeadColumn = (rowData: IProjectData) => {
+    const DeliveryHead: IPeoplePickerDetails[] = rowData?.DeliveryHead;
     return (
-      <div className="MultilinedisplayText" title={rowData?.BillingMileStone}>
-        {rowData?.BillingMileStone || "-"}
+      <div>
+        {rowData?.ProjectManager?.length > 1
+          ? multiPeoplePickerTemplate(DeliveryHead)
+          : peoplePickerTemplate(DeliveryHead[0])}
       </div>
     );
   };
+
+  // Milestone Column Template
+  // const milestoneTemplate = (rowData: any) => {
+  //   return (
+  //     <div className="MultilinedisplayText" title={rowData?.BillingMileStone}>
+  //       {rowData?.BillingMileStone || "-"}
+  //     </div>
+  //   );
+  // };
 
   // Invoice Trigger Column Template
   const InvoiceTriggerTemplate = (rowData: any) => {
@@ -751,7 +776,7 @@ const MainComponent = (props: any) => {
               rows={10}
               tableStyle={{ minWidth: "150rem" }}
             >
-              <Column sortable field="ProjectID" header="Project ID"></Column>
+              <Column sortable field="ProjectID" header="Project Id"></Column>
               <Column
                 sortable
                 field="ProjectName"
@@ -771,6 +796,12 @@ const MainComponent = (props: any) => {
               ></Column>
               <Column
                 sortable
+                field="DeliverHead"
+                header="Delivery Head"
+                body={renderDeliveryHeadColumn}
+              ></Column>
+              <Column
+                sortable
                 field="BillingModel"
                 header="Billing Model"
               ></Column>
@@ -787,7 +818,7 @@ const MainComponent = (props: any) => {
               <Column
                 sortable
                 field="PlannedEndDate"
-                header="Planned End Date"
+                header="End Date"
                 body={(rowData) => {
                   return (
                     <div>
@@ -796,12 +827,12 @@ const MainComponent = (props: any) => {
                   );
                 }}
               ></Column>
-              <Column
+              {/* <Column
                 sortable
                 field="BillingMileStone"
                 header="Milestone"
                 body={milestoneTemplate}
-              ></Column>
+              ></Column> */}
               <Column
                 sortable
                 field="DueDate"

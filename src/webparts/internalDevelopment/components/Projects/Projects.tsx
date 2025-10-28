@@ -58,6 +58,7 @@ const commentsImage: string = require("../../../../ExternalRef/Images/comment.pn
 const DeleteImage: string = require("../../../../ExternalRef/Images/trashcan.png");
 const EditImage: string = require("../../../../ExternalRef/Images/Edit.png");
 const VersionHistoryImage: string = require("../../../../ExternalRef/Images/versionHistory.png");
+const FolderImage: string = require("../../../../ExternalRef/Images/folder.png");
 const FilterImage: string = require("../../../../ExternalRef/Images/filter.png");
 const FilterNoneImage: string = require("../../../../ExternalRef/Images/filternone.png");
 
@@ -953,6 +954,24 @@ const Projects = (props: IProps): JSX.Element => {
                           alt="no image"
                         ></img>
                       </div>
+                      {rowData?.ProjectStatus == "6" && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(
+                              `${props?.spfxContext?.pageContext?.web?.absoluteUrl}/ProjectFolderStructure/Forms/AllItems.aspx`,
+                              "_blank"
+                            );
+                          }}
+                        >
+                          <img
+                            title="Project Folder Structure"
+                            src={FolderImage}
+                            alt="no image"
+                          ></img>
+                        </div>
+                      )}
+
                       {(rowData?.ProjectStatus == "4" ||
                         rowData?.ProjectStatus == "5") && (
                         <div
