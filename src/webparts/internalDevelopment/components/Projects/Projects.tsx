@@ -666,6 +666,20 @@ const Projects = (props: IProps): JSX.Element => {
               <h2>Projects</h2>
             </div>
             <div className={styles.filterBtns}>
+              <div className={styles.btnAndText}>
+                <div
+                  className={styles.btnBackGround}
+                  onClick={() => {
+                    window.open(
+                      `${props?.spfxContext?.pageContext?.web?.absoluteUrl}//SitePages/Reports.aspx`,
+                      "_blank"
+                    );
+                  }}
+                >
+                  Reports
+                </div>
+              </div>
+
               <div>
                 <PrimaryButton
                   styles={RefreshButton}
