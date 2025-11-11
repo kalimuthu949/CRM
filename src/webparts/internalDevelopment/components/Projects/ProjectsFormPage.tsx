@@ -32,6 +32,7 @@ import {
 } from "../../../../ExternalRef/CommonServices/Config";
 import SPServices from "../../../../ExternalRef/CommonServices/SPServices";
 import {
+  IApproveModal,
   IBasicDropDown,
   IDelModal,
   IPeoplePickerDetails,
@@ -46,7 +47,7 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const ProjectFormPage = (props: any) => {
-  console.log(props?.data?.ProjectStatus, "props data in project form page");
+  console.log(props?.data, "props data in project form page");
   // Local Variables:
   const ConfigureationData: IConfigState = useSelector(
     (state: any) => state.ConfigureationData
@@ -73,9 +74,10 @@ const ProjectFormPage = (props: any) => {
   });
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [isDelModal, setIsDelModal] = React.useState<IDelModal>({
+  const [isDelModal, setIsDelModal] = React.useState<IApproveModal>({
     isOpen: false,
     Id: null,
+    projectStatus: "",
   });
   const [isSendApproveModal, setIsSendApproveModal] = React.useState<IDelModal>(
     {
@@ -113,24 +115,43 @@ const ProjectFormPage = (props: any) => {
   };
 
   //GetLeads List Data Only FirstName And ID:
+  // const getLeads = () => {
+  //   SPServices.SPReadItems({
+  //     Listname: Config.ListNames.CRMLeads,
+  //     Select: "*",
+  //     Orderby: "Modified",
+  //     Orderbydecorasc: true,
+  //     Filter: [
+  //       {
+  //         FilterKey: "IsDeleted",
+  //         Operator: "eq",
+  //         FilterValue: "false",
+  //       },
+  //     ],
+  //   })
+  //     .then(async (res: any[]) => {
+  //       const leads: IBasicDropDown[] = res.map((item) => ({
+  //         id: item.ID,
+  //         name: item.FirstName,
+  //       }));
+  //       setLeadOptions(leads);
+  //       getPMOGroupUsers();
+  //       getDHGroupMembers();
+  //       getBillingsListDetails();
+  //       props?.setLoader(false);
+  //     })
+  //     .catch((err) => {
+  //       console.error("Error fetching CRMLeads:", err);
+  //     });
+  // };
   const getLeads = () => {
-    SPServices.SPReadItems({
-      Listname: Config.ListNames.CRMLeads,
-      Select: "*",
-      Orderby: "Modified",
-      Orderbydecorasc: true,
-      Filter: [
-        {
-          FilterKey: "IsDeleted",
-          Operator: "eq",
-          FilterValue: "false",
-        },
-      ],
+    SPServices.getSPGroupMember({
+      GroupName: Config.GroupNames.Leads,
     })
-      .then(async (res: any[]) => {
-        const leads: IBasicDropDown[] = res.map((item) => ({
-          id: item.ID,
-          name: item.FirstName,
+      .then((res: any) => {
+        const leads: IBasicDropDown[] = res.map((user: any) => ({
+          id: user?.Id,
+          name: user?.Title,
         }));
         setLeadOptions(leads);
         getPMOGroupUsers();
@@ -139,7 +160,7 @@ const ProjectFormPage = (props: any) => {
         props?.setLoader(false);
       })
       .catch((err) => {
-        console.error("Error fetching CRMLeads:", err);
+        console.log("Error fetching Leads group members:", err);
       });
   };
 
@@ -279,12 +300,15 @@ const ProjectFormPage = (props: any) => {
     if (props?.data && leadOptions.length > 0) {
       setFormData((prev: any) => {
         const newForm = { ...props.data };
-        if (props.data?.Lead && typeof props?.data?.Lead === "string") {
+        if (
+          props.data?.AccountManager &&
+          typeof props?.data?.AccountManager === "string"
+        ) {
           const matchedLead = leadOptions.find(
-            (x) => x.name === props.data.Lead
+            (x) => x.name === props?.data?.AccountManager
           );
           if (matchedLead) {
-            newForm.Lead = matchedLead;
+            newForm.AccountManager = matchedLead;
           }
         }
         return newForm;
@@ -335,10 +359,6 @@ const ProjectFormPage = (props: any) => {
 
       case "DeliveryHead":
         return value && value.length > 0;
-
-      case "Lead":
-        return value && typeof value === "object" && value.name?.trim() !== "";
-
       case "ProjectStatus":
       case "BillingModel":
       case "Currency":
@@ -385,7 +405,6 @@ const ProjectFormPage = (props: any) => {
       errors.ProjectManager = true;
     if (!isValidField("DeliveryHead", formData?.DeliveryHead))
       errors.DeliveryHead = true;
-    if (!isValidField("Lead", formData?.Lead)) errors.Lead = true;
     if (!isValidField("AccountName", formData?.AccountName))
       errors.AccountName = true;
     if (!isValidField("Budget", formData?.Budget)) errors.Budget = true;
@@ -458,7 +477,7 @@ const ProjectFormPage = (props: any) => {
 
     let json: any = {
       ProjectID: formData?.ProjectID,
-      LeadId: formData?.Lead?.id,
+      AccountManager: formData?.AccountManager?.name,
       AccountName: formData?.AccountName,
       ProjectName: formData?.ProjectName,
       StartDate: SPServices.GetDateFormat(formData?.StartDate),
@@ -591,6 +610,7 @@ const ProjectFormPage = (props: any) => {
 
   //Add datas to CRMProjects List:
   const handleAdd = async (json: any) => {
+    debugger;
     try {
       const createItem: any = await SPServices.SPAddItem({
         Listname: Config.ListNames.CRMProjects,
@@ -924,7 +944,7 @@ const ProjectFormPage = (props: any) => {
     if (!props?.data) {
       setFormData({
         ProjectID: "",
-        Lead: "",
+        AccountManager: "",
         AccountName: "",
         ProjectName: "",
         StartDate: null,
@@ -986,8 +1006,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.ProjectName}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   style={
@@ -1006,8 +1027,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.AccountName}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   style={
@@ -1018,22 +1040,18 @@ const ProjectFormPage = (props: any) => {
                 />
               </div>
               <div className={`${selfComponentStyles.allField} dealFormPage`}>
-                <Label>Lead</Label>
+                <Label>Account manager</Label>
                 <Dropdown
-                  value={formData?.Lead}
+                  value={formData?.AccountManager}
                   options={leadOptions}
                   optionLabel="name"
-                  onChange={(e) => handleOnChange("Lead", e.value)}
+                  onChange={(e) => handleOnChange("AccountManager", e.value)}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
-                  }
-                  style={
-                    errorMessage["Lead"]
-                      ? { border: "2px solid #ff0000" }
-                      : undefined
                   }
                 />
               </div>
@@ -1065,8 +1083,9 @@ const ProjectFormPage = (props: any) => {
                     }
                     disabled={
                       props?.isView ||
-                      isProjectManager ||
-                      isDeliveryHead ||
+                      // isProjectManager ||
+                      (isProjectManager && !isPMOUser) ||
+                      (isDeliveryHead && !isPMOUser) ||
                       props?.data?.ProjectStatus == "6"
                     }
                   />
@@ -1183,8 +1202,9 @@ const ProjectFormPage = (props: any) => {
                     }}
                     disabled={
                       props?.isView ||
-                      isProjectManager ||
-                      isDeliveryHead ||
+                      // isProjectManager ||
+                      (isProjectManager && !isPMOUser) ||
+                      (isDeliveryHead && !isPMOUser) ||
                       props?.data?.ProjectStatus == "6"
                     }
                   />
@@ -1214,8 +1234,9 @@ const ProjectFormPage = (props: any) => {
                   }}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                 />
@@ -1244,8 +1265,9 @@ const ProjectFormPage = (props: any) => {
                   }}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                 />
@@ -1291,8 +1313,9 @@ const ProjectFormPage = (props: any) => {
                     props?.isView ||
                     billingsData?.length > 0 ||
                     billingsListData?.length > 0 ||
-                    isProjectManager ||
-                    isDeliveryHead
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser)
                   }
                   style={
                     errorMessage["BillingModel"]
@@ -1314,8 +1337,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.Budget}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   style={
@@ -1345,8 +1369,9 @@ const ProjectFormPage = (props: any) => {
                   }
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                 />
@@ -1364,8 +1389,9 @@ const ProjectFormPage = (props: any) => {
                   onChange={(e) => handleOnChange("Currency", e?.value?.name)}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   style={
@@ -1384,8 +1410,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.BillingContactName}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   style={
@@ -1404,8 +1431,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.BillingContactEmail}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   style={
@@ -1430,8 +1458,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.BillingContactMobile}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                 />
@@ -1446,8 +1475,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.BillingAddress}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   maxLength={500}
@@ -1461,8 +1491,9 @@ const ProjectFormPage = (props: any) => {
                   value={formData?.Remarks}
                   disabled={
                     props?.isView ||
-                    isProjectManager ||
-                    isDeliveryHead ||
+                    // isProjectManager ||
+                    (isProjectManager && !isPMOUser) ||
+                    (isDeliveryHead && !isPMOUser) ||
                     props?.data?.ProjectStatus == "6"
                   }
                   maxLength={500}
@@ -1545,6 +1576,7 @@ const ProjectFormPage = (props: any) => {
                       setIsDelModal((pre) => ({
                         ...pre,
                         isOpen: true,
+                        projectStatus: formData?.ProjectStatus,
                       }));
                     }}
                     style={{ borderRadius: "5px" }}
@@ -1620,7 +1652,7 @@ const ProjectFormPage = (props: any) => {
             text="No"
             className={styles.cancelBtn}
             onClick={() => {
-              setIsDelModal({ isOpen: false, Id: null });
+              setIsDelModal({ isOpen: false, Id: null, projectStatus: "" });
             }}
           />
           <PrimaryButton
@@ -1631,7 +1663,7 @@ const ProjectFormPage = (props: any) => {
                 ...pre,
                 isOpen: false,
               }));
-              if (isProjectManager) {
+              if (isProjectManager && isDelModal.projectStatus === "2") {
                 handleStatusUpdate("3");
               } else {
                 handleStatusUpdate("6");

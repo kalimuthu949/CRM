@@ -28,10 +28,12 @@ export namespace Config {
   };
   export const LibraryNames: ILibrary = {
     ProjectFiles: "ProjectFiles",
+    ProjectFolderStructure: "ProjectFolderStructure",
   };
   export const GroupNames: IGroup = {
     PMO: "PMO",
     DH: "DH",
+    Leads: "Leads",
   };
   export const CRMOwners: string = "Admins";
   export const CRMManagersGroup: string = "Managers";
@@ -71,10 +73,12 @@ export namespace Config {
     ID: 0,
     MileStoneName: "",
     MileStoneDescription: "",
+    CompletionPercentage: 0,
     DueDate: "",
     Amount: null,
     TMAmount: null,
     Status: "",
+    InvoiceID: "",
     ReminderDaysBeforeDue: "",
     Notes: "",
     Currency: "",
