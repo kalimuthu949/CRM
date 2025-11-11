@@ -74,9 +74,8 @@ const MilestonesReports = (props: any) => {
     try {
       const projectRes: any = await SPServices.SPReadItems({
         Listname: Config.ListNames.CRMProjects,
-        Select:
-          "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName",
-        Expand: "ProjectManager,Lead",
+        Select: "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title",
+        Expand: "ProjectManager",
         Orderby: "Modified",
         Orderbydecorasc: true,
         Filter: [
@@ -129,7 +128,6 @@ const MilestonesReports = (props: any) => {
               IsDeleted: project.IsDelete,
               ProjectName: project.ProjectName,
               AccountName: project.AccountName,
-              Lead: project.Lead?.FirstName,
               ProjectManager: _ProjectManager,
               BillingModel: project.BillingModel,
               StartDate: project.StartDate,
@@ -151,7 +149,6 @@ const MilestonesReports = (props: any) => {
             ProjectID: project.ProjectID,
             ProjectName: project.ProjectName,
             AccountName: project.AccountName,
-            Lead: project.Lead?.FirstName,
             ProjectManager: _ProjectManager,
             BillingModel: project.BillingModel,
             StartDate: project.StartDate,

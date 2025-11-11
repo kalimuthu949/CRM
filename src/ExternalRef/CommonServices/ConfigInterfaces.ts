@@ -13,8 +13,10 @@ interface IList {
 }
 interface ILibrary {
   ProjectFiles: string;
+  ProjectFolderStructure: string;
 }
 interface IGroup {
   PMO: string;
   DH: string;
+  Leads: string;
 }

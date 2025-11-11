@@ -29,7 +29,7 @@ import Loading from "../../../../ExternalRef/Loader/Loading";
 import { Dialog } from "primereact/dialog";
 
 const Billings = (props: any) => {
-  console.log(props?.data?.BillingModel, "billings props");
+  console.log(props?.isPMOUser, "isPMOuser");
   //Local variables:
   const ScreenWidth: number = window.innerWidth;
   const BillingModel: string = props?.BillingModel;
@@ -92,10 +92,14 @@ const Billings = (props: any) => {
             ID: items?.ID,
             MileStoneName: items?.MileStoneName,
             MileStoneDescription: items?.MileStoneDescription,
+            CompletionPercentage: items?.CompletionPercentage
+              ? items?.CompletionPercentage
+              : "",
             DueDate: items?.DueDate,
             Amount: items?.Amount,
             TMAmount: items?.TMAmount,
             Status: items?.Status,
+            InvoiceID: items?.InvoiceID || "",
             ReminderDaysBeforeDue: items?.ReminderDaysBeforeDue
               ? items?.ReminderDaysBeforeDue
               : 7,
@@ -111,6 +115,13 @@ const Billings = (props: any) => {
             ProjectId: items?.ProjectId,
           });
         });
+
+        BillingDetails.sort((a, b) => {
+          const dateA = new Date(a?.DueDate);
+          const dateB = new Date(b?.DueDate);
+          return dateA.getTime() - dateB.getTime();
+        });
+
         setMasterBillingDetails([...BillingDetails]);
         setBillingDetails([...BillingDetails]);
         setLoader(false);
@@ -125,8 +136,14 @@ const Billings = (props: any) => {
 
   //Get BillingsForm Details:
   const getBillingFormDetails = (details: any) => {
-    setBillingDetails([...details]);
-    setMasterBillingDetails([...details]);
+    const sortedDetails = [...details].sort((a, b) => {
+      const dateA = new Date(a?.DueDate);
+      const dateB = new Date(b?.DueDate);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    setBillingDetails(sortedDetails);
+    setMasterBillingDetails(sortedDetails);
   };
 
   //Delete Particular Item:
@@ -170,6 +187,11 @@ const Billings = (props: any) => {
     return (
       <div>{Config.statusLabelMap[rowData?.Status] || rowData?.Status}</div>
     );
+  };
+
+  //Render InvoiceID column
+  const renderInvoiceIDTemplate = (rowData: IBillingsDetails) => {
+    return <div>{rowData?.InvoiceID || "-"}</div>;
   };
 
   //Function to check whether to show invoice icon or not:
@@ -274,10 +296,29 @@ const Billings = (props: any) => {
                   />
                 </IconField>
               </div>
-              {!props?.isView &&
+              {/* {!props?.isView &&
               !props?.isDeliveryHead &&
               props?.data?.ProjectStatus !== "6" &&
               props?.isPMOUser ? (
+                <div className={styles.btnAndText}>
+                  <div
+                    onClick={() => openForm("add")}
+                    className={styles.btnBackGround}
+                  >
+                    <img
+                      src={PlusImage}
+                      alt="no image"
+                      style={{ width: "15px", height: "15px" }}
+                    />
+                    New milestone
+                  </div>
+                </div>
+              ) : (
+                ""
+              )} */}
+              {!props?.isView &&
+              (!props?.isDeliveryHead || props?.isPMOUser) &&
+              props?.data?.ProjectStatus !== "6" ? (
                 <div className={styles.btnAndText}>
                   <div
                     onClick={() => openForm("add")}
@@ -334,6 +375,16 @@ const Billings = (props: any) => {
                   field="MileStoneDescription"
                   header="MileStone description"
                 ></Column>
+              )}
+              {BillingModel == "Milestone" && (
+                <Column
+                  sortable
+                  field="CompletionPercentage"
+                  header="Completion percentage"
+                  body={(rowData) => {
+                    return <div>{rowData?.CompletionPercentage} %</div>;
+                  }}
+                />
               )}
               {BillingModel == "Milestone" && (
                 <Column sortable field="Amount" header="Amount"></Column>
@@ -403,111 +454,129 @@ const Billings = (props: any) => {
                   );
                 }}
               ></Column>
-              <Column
+              {/* <Column
                 sortable
                 field="ReminderDaysBeforeDue"
                 header="Reminder days before due"
-              ></Column>
+              ></Column> */}
               <Column
                 sortable
                 field="Status"
                 header="Status"
                 body={renderStatus}
               ></Column>
+              <Column
+                sortable
+                field="InvoiceID"
+                header="Invoice id"
+                body={renderInvoiceIDTemplate}
+              ></Column>
               <Column sortable field="Notes" header="Notes"></Column>
 
-              {!props?.isView && !props?.isDeliveryHead && (
-                <Column
-                  field="Action"
-                  header="Actions"
-                  body={(rowData: IBillingsDetails) => {
-                    return (
-                      <div className={styles.Actions}>
-                        {props?.ProjectsFormData?.ProjectStatus !== "6" ||
-                        ((props?.data?.ProjectManager?.some(
-                          (user: any) => user?.email == props?.loginUserEmail
-                        ) ||
-                          props?.isPMOUser) &&
-                          props?.data?.BillingModel == "T&M" &&
-                          (rowData?.Status == "0" ||
-                            rowData?.Status == "4")) ? (
-                          <>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openForm("edit", rowData);
-                              }}
-                            >
-                              <img
-                                title="Edit"
-                                src={EditImage}
-                                alt="no image"
-                              ></img>
-                            </div>
-                            {props?.isPMOUser &&
-                            props?.ProjectsFormData?.ProjectStatus !== "6" ? (
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setIsDelModal({
-                                    Id: rowData?.ID,
-                                    isOpen: true,
-                                  });
-                                }}
-                              >
-                                <img
-                                  title="Delete"
-                                  src={DeleteImage}
-                                  alt="no image"
-                                ></img>
-                              </div>
-                            ) : (
-                              ""
-                            )}
-                          </>
-                        ) : (
-                          ""
-                        )}
-                        {(props?.data?.ProjectStatus == "6" &&
-                          (props?.data?.ProjectManager?.some(
+              {!props?.isView &&
+                (!props?.isDeliveryHead ||
+                  props?.isPMOUser ||
+                  props?.data?.ProjectManager?.some(
+                    (user: any) => user?.email == props?.loginUserEmail
+                  )) && (
+                  <Column
+                    field="Action"
+                    header="Actions"
+                    body={(rowData: IBillingsDetails) => {
+                      return (
+                        <div className={styles.Actions}>
+                          {props?.ProjectsFormData?.ProjectStatus !== "6" ||
+                          ((props?.data?.ProjectManager?.some(
                             (user: any) => user?.email == props?.loginUserEmail
                           ) ||
                             props?.isPMOUser) &&
-                          rowData?.Status == "0" &&
-                          shouldShowInvoiceIcon(
-                            rowData?.DueDate,
-                            rowData?.ReminderDaysBeforeDue
-                          )) ||
-                        ((props?.data?.ProjectManager?.some(
-                          (user: any) => user?.email == props?.loginUserEmail
-                        ) ||
-                          props?.isPMOUser) &&
-                          rowData?.Status == "4") ? (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // handleInvoiceTrigger(rowData?.ID);
-                              setIsInvoiceRaiseModal({
-                                Id: rowData?.ID,
-                                isOpen: true,
-                                hours: rowData?.Hours ? rowData?.Hours : "",
-                              });
-                            }}
-                          >
-                            <img
-                              title="Raise Invoice"
-                              src={invoiceImage}
-                              alt="no image"
-                            />
-                          </div>
-                        ) : (
-                          ""
-                        )}
-                      </div>
-                    );
-                  }}
-                ></Column>
-              )}
+                            props?.data?.BillingModel == "T&M" &&
+                            (rowData?.Status == "0" ||
+                              rowData?.Status == "4")) ? (
+                            <>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openForm("edit", rowData);
+                                }}
+                              >
+                                <img
+                                  title="Edit"
+                                  src={EditImage}
+                                  alt="no image"
+                                ></img>
+                              </div>
+                              {props?.isPMOUser &&
+                              props?.ProjectsFormData?.ProjectStatus !== "6" ? (
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsDelModal({
+                                      Id: rowData?.ID,
+                                      isOpen: true,
+                                    });
+                                  }}
+                                >
+                                  <img
+                                    title="Delete"
+                                    src={DeleteImage}
+                                    alt="no image"
+                                  ></img>
+                                </div>
+                              ) : (
+                                ""
+                              )}
+                            </>
+                          ) : (
+                            ""
+                          )}
+                          {(props?.data?.ProjectStatus == "6" &&
+                            (props?.data?.ProjectManager?.some(
+                              (user: any) =>
+                                user?.email == props?.loginUserEmail
+                            ) ||
+                              props?.isPMOUser) &&
+                            rowData?.Status == "0" &&
+                            shouldShowInvoiceIcon(
+                              rowData?.DueDate,
+                              rowData?.ReminderDaysBeforeDue
+                            )) ||
+                          ((props?.data?.ProjectManager?.some(
+                            (user: any) => user?.email == props?.loginUserEmail
+                          ) ||
+                            props?.isPMOUser) &&
+                            rowData?.Status == "4") ||
+                          (props?.data?.ProjectManager?.some(
+                            (user: any) => user?.email == props?.loginUserEmail
+                          ) &&
+                            new Date(rowData?.DueDate) < new Date() &&
+                            props?.data?.ProjectStatus == "6" &&
+                            rowData?.Status == "0") ? (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // handleInvoiceTrigger(rowData?.ID);
+                                setIsInvoiceRaiseModal({
+                                  Id: rowData?.ID,
+                                  isOpen: true,
+                                  hours: rowData?.Hours ? rowData?.Hours : "",
+                                });
+                              }}
+                            >
+                              <img
+                                title="Raise Invoice"
+                                src={invoiceImage}
+                                alt="no image"
+                              />
+                            </div>
+                          ) : (
+                            ""
+                          )}
+                        </div>
+                      );
+                    }}
+                  ></Column>
+                )}
             </DataTable>
           </div>
         </div>

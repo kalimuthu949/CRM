@@ -145,7 +145,6 @@ const BillingsForm = (props: any) => {
       case "BillingFrequency":
       case "Currency":
       case "MileStoneName":
-      case "ResourceType":
       case "Status":
         return value && typeof value === "string" && value.trim() !== "";
 
@@ -224,8 +223,6 @@ const BillingsForm = (props: any) => {
       if (!isValidField("BillingFrequency", formData?.BillingFrequency))
         errors.BillingFrequency = true;
       if (!isValidField("Rate", formData?.Rate)) errors.Rate = true;
-      if (!isValidField("ResourceType", formData?.ResourceType))
-        errors.ResourceType = true;
       if (!isValidField("Hours", formData?.Hours)) errors.Hours = true;
     }
 
@@ -261,6 +258,9 @@ const BillingsForm = (props: any) => {
       MileStoneDescription: formData?.MileStoneDescription
         ? formData?.MileStoneDescription
         : "",
+      CompletionPercentage: formData?.CompletionPercentage
+        ? formData?.CompletionPercentage
+        : null,
       MileStoneName: formData?.MileStoneName ? formData?.MileStoneName : "",
       MonthlyAmount: formData?.MonthlyAmount ? formData?.MonthlyAmount : 0,
       Notes: formData?.Notes ? formData?.Notes : "",
@@ -377,6 +377,7 @@ const BillingsForm = (props: any) => {
         DueDate: null,
         EndMonth: null,
         MileStoneDescription: "",
+        ConpletionPercentage: 0,
         MileStoneName: "",
         MonthlyAmount: null,
         Notes: "",
@@ -440,6 +441,18 @@ const BillingsForm = (props: any) => {
                       }
                       disabled={props?.isView}
                       autoResize
+                    />
+                  </div>
+                  <div className={`${projectFormStyles.allField} dealFormPage`}>
+                    <Label>Completion percentage</Label>
+                    <InputText
+                      value={formData?.CompletionPercentage}
+                      onChange={(e) => {
+                        const onlyNumbers = e.target.value.replace(/\D/g, "");
+                        handleOnChange("CompletionPercentage", onlyNumbers);
+                      }}
+                      placeholder="Enter completion percentage (0%-100%)"
+                      disabled={props?.isView}
                     />
                   </div>
                   <div className={`${projectFormStyles.allField} dealFormPage`}>
@@ -549,18 +562,13 @@ const BillingsForm = (props: any) => {
               )}
               {props?.BillingModel == "T&M" && (
                 <div className={`${projectFormStyles.allField} dealFormPage`}>
-                  <Label>Resource type</Label>
+                  <Label>Resource name</Label>
                   <InputText
                     value={formData?.ResourceType}
                     onChange={(e) =>
                       handleOnChange("ResourceType", e.target.value)
                     }
-                    placeholder="Enter Resource type"
-                    style={
-                      errorMessage["ResourceType"]
-                        ? { border: "2px solid #ff0000" }
-                        : undefined
-                    }
+                    placeholder="Enter Resource name"
                     disabled={props?.isView}
                   />
                 </div>
@@ -764,11 +772,13 @@ const BillingsForm = (props: any) => {
 
               <div className={`${projectFormStyles.allField} dealFormPage`}>
                 <Label>Notes</Label>
-                <InputText
+                <InputTextarea
+                  maxLength={500}
                   value={formData?.Notes}
                   onChange={(e) => handleOnChange("Notes", e.target.value)}
                   placeholder="Enter notes"
                   disabled={props?.isView}
+                  autoResize
                 />
               </div>
             </div>

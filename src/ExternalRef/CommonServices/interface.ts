@@ -9,8 +9,7 @@ export interface IPeoplePickerDetails {
 export interface IProjectData {
   ID: number;
   ProjectID: string;
-  Lead: string;
-  LeadId: number;
+  AccountManager: string;
   AccountName: string;
   ProjectName: string;
   StartDate: string;
@@ -50,15 +49,23 @@ export interface IDelModal {
   Id: number | null;
 }
 
+export interface IApproveModal {
+  isOpen: boolean;
+  Id: number | null;
+  projectStatus: string;
+}
+
 //CRMBillings List Interface:
 export interface IBillingsDetails {
   ID: number;
   MileStoneName: string;
   MileStoneDescription: string;
+  CompletionPercentage: number;
   DueDate: string;
   Amount: null;
   TMAmount: null;
   Status: string;
+  InvoiceID: string;
   ReminderDaysBeforeDue: string;
   Notes: string;
   Currency: string;

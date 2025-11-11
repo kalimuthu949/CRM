@@ -63,7 +63,7 @@ const MainComponent = (props: any) => {
   const [masterReportData, setMasterReportData] = React.useState<any[]>([]);
   const [filterValues, setFilterValues] = React.useState({
     ProjectID: "",
-    Lead: "",
+    AccountManager: "",
     AccountName: "",
     Status: "",
     Currency: "",
@@ -81,8 +81,8 @@ const MainComponent = (props: any) => {
       const projectRes: any = await SPServices.SPReadItems({
         Listname: Config.ListNames.CRMProjects,
         Select:
-          "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName,DeliveryHead/Id,DeliveryHead/EMail,DeliveryHead/Title",
-        Expand: "ProjectManager,Lead,DeliveryHead",
+          "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,DeliveryHead/Id,DeliveryHead/EMail,DeliveryHead/Title",
+        Expand: "ProjectManager,DeliveryHead",
         Orderby: "Modified",
         Orderbydecorasc: true,
         Filter: [
@@ -157,7 +157,7 @@ const MainComponent = (props: any) => {
               ProjectID: project.ProjectID,
               ProjectName: project.ProjectName,
               AccountName: project.AccountName,
-              Lead: project.Lead?.FirstName,
+              AccountManager: project.AccountManager,
               ProjectManager: _ProjectManager,
               DeliveryHead: _DeliverHead,
               BillingModel: project.BillingModel,
@@ -184,7 +184,7 @@ const MainComponent = (props: any) => {
             ProjectID: project.ProjectID,
             ProjectName: project.ProjectName,
             AccountName: project.AccountName,
-            Lead: project.Lead?.FirstName,
+            AccountManager: project.AccountManager,
             ProjectManager: _ProjectManager,
             DeliverHead: _DeliverHead,
             BillingModel: project.BillingModel,
@@ -305,6 +305,19 @@ const MainComponent = (props: any) => {
     return <div>{rowData?.InvoiceTrigger ? "Yes" : "No"}</div>;
   };
 
+  // Amount Column Template
+  const renderAmountTemplate = (rowData: any) => {
+    return (
+      <div>
+        {rowData?.BillingModel == "Milestone"
+          ? rowData?.Amount
+          : rowData?.BillingModel == "T&M"
+          ? rowData?.TMAmount
+          : rowData?.MonthlyAmount || "-"}
+      </div>
+    );
+  };
+
   // Invoice ID Column Template
   const InvoiceIDTemplate = (rowData: any) => {
     return <div>{rowData?.InvoiceID || "-"}</div>;
@@ -355,7 +368,7 @@ const MainComponent = (props: any) => {
         ).join(" ") || "";
       return (
         item.ProjectID?.toLowerCase().includes(val.toLowerCase()) ||
-        item.Lead?.toLowerCase().includes(val.toLowerCase()) ||
+        item.AccountManager?.toLowerCase().includes(val.toLowerCase()) ||
         item.AccountName?.toLowerCase().includes(val.toLowerCase()) ||
         item.ProjectName?.toLowerCase().includes(val.toLowerCase()) ||
         item.BillingModel?.toLowerCase().includes(val.toLowerCase()) ||
@@ -364,7 +377,7 @@ const MainComponent = (props: any) => {
           .includes(val.toLowerCase()) ||
         item?.InvoiceID?.toLowerCase().includes(val.toLowerCase()) ||
         item?.Remarks?.toLowerCase().includes(val.toLowerCase()) ||
-        item?.Amount?.toString().toLowerCase().includes(val.toLowerCase()) ||
+        // item?.Amount?.toString().toLowerCase().includes(val.toLowerCase()) ||
         item.Currency?.toLowerCase().includes(val.toLowerCase()) ||
         managerNames.includes(val.toLowerCase())
       );
@@ -382,7 +395,7 @@ const MainComponent = (props: any) => {
       { header: "Project ID", key: "ProjectID", width: 20 },
       { header: "Project Name", key: "ProjectName", width: 30 },
       { header: "Account Name", key: "AccountName", width: 25 },
-      { header: "Lead", key: "Lead", width: 20 },
+      { header: "AccountManager", key: "AccountManager", width: 20 },
       { header: "Project Manager", key: "ProjectManager", width: 35 },
       { header: "Start Date", key: "StartDate", width: 20 },
       { header: "Planned End Date", key: "PlannedEndDate", width: 20 },
@@ -405,7 +418,7 @@ const MainComponent = (props: any) => {
         ProjectID: item.ProjectID || "-",
         ProjectName: item.ProjectName || "-",
         AccountName: item.AccountName || "-",
-        Lead: item.Lead || "-",
+        AccountManager: item.AccountManager || "-",
         ProjectManager: projectManagers,
         StartDate: item.StartDate
           ? moment(item.StartDate).format("DD/MM/YYYY")
@@ -480,8 +493,8 @@ const MainComponent = (props: any) => {
       const matchProjectID = item?.ProjectID?.toLowerCase().includes(
         filterValues.ProjectID.toLowerCase()
       );
-      const matchLead = item?.Lead?.toLowerCase().includes(
-        filterValues.Lead.toLowerCase()
+      const matchLead = item?.AccountManager?.toLowerCase().includes(
+        filterValues.AccountManager.toLowerCase()
       );
       const matchAccount = item?.AccountName?.toLowerCase().includes(
         filterValues.AccountName.toLowerCase()
@@ -529,7 +542,9 @@ const MainComponent = (props: any) => {
           ).join(" ") || "";
         return (
           item.ProjectID?.toLowerCase().includes(searchVal.toLowerCase()) ||
-          item.Lead?.toLowerCase().includes(searchVal.toLowerCase()) ||
+          item.AccountManager?.toLowerCase().includes(
+            searchVal.toLowerCase()
+          ) ||
           item.AccountName?.toLowerCase().includes(searchVal.toLowerCase()) ||
           item.ProjectName?.toLowerCase().includes(searchVal.toLowerCase()) ||
           item.BillingModel?.toLowerCase().includes(searchVal.toLowerCase()) ||
@@ -676,10 +691,12 @@ const MainComponent = (props: any) => {
                 />
               </div>
               <div className={styles.filterField}>
-                <label>Lead</label>
+                <label>Account manager</label>
                 <InputText
-                  value={filterValues?.Lead}
-                  onChange={(e) => handleFilterChange("Lead", e.target.value)}
+                  value={filterValues?.AccountManager}
+                  onChange={(e) =>
+                    handleFilterChange("AccountManager", e.target.value)
+                  }
                   placeholder="Enter here"
                 />
               </div>
@@ -747,7 +764,7 @@ const MainComponent = (props: any) => {
                     setSearchVal("");
                     setFilterValues({
                       ProjectID: "",
-                      Lead: "",
+                      AccountManager: "",
                       AccountName: "",
                       Status: "",
                       Currency: "",
@@ -787,7 +804,11 @@ const MainComponent = (props: any) => {
                 field="AccountName"
                 header="Account Name"
               ></Column>
-              <Column sortable field="Lead" header="Lead"></Column>
+              <Column
+                sortable
+                field="AccountManager"
+                header="Account manager"
+              ></Column>
               <Column
                 sortable
                 field="ProjectManager"
@@ -844,7 +865,12 @@ const MainComponent = (props: any) => {
                 }}
               ></Column>
               <Column sortable field="Currency" header="Currency"></Column>
-              <Column sortable field="Budget" header="Actual Budget"></Column>
+              <Column
+                sortable
+                field="Amount"
+                header="Invoice Amount"
+                body={renderAmountTemplate}
+              ></Column>
               <Column
                 sortable
                 field="ReceivedAmount"

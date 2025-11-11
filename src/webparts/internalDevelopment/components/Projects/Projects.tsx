@@ -41,6 +41,7 @@ import { Dropdown } from "primereact/dropdown";
 import Loading from "../../../../ExternalRef/Loader/Loading";
 import ChangeLog from "../ChangeLog/ChangeLog";
 import { Dialog } from "primereact/dialog";
+import { sp } from "@pnp/sp";
 interface IProps {
   Notify: (
     type: "info" | "success" | "warn" | "error" | "secondary" | "contrast",
@@ -92,7 +93,7 @@ const Projects = (props: IProps): JSX.Element => {
   const [filterBar, setFilterBar] = React.useState<boolean>(false);
   const [filterValues, setFilterValues] = React.useState({
     ProjectID: "",
-    Lead: "",
+    AccountManager: "",
     AccountName: "",
     ProjectStatus: "",
     BillingModel: "",
@@ -117,8 +118,8 @@ const Projects = (props: IProps): JSX.Element => {
     SPServices.SPReadItems({
       Listname: Config.ListNames.CRMProjects,
       Select:
-        "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,Lead/Id,Lead/FirstName,DeliveryHead/Id,DeliveryHead/EMail,DeliveryHead/Title",
-      Expand: "ProjectManager,Lead,DeliveryHead",
+        "*,ProjectManager/Id,ProjectManager/EMail,ProjectManager/Title,DeliveryHead/Id,DeliveryHead/EMail,DeliveryHead/Title",
+      Expand: "ProjectManager,DeliveryHead",
       Orderby: "Modified",
       Orderbydecorasc: true,
       Filter: [
@@ -155,8 +156,7 @@ const Projects = (props: IProps): JSX.Element => {
           projectDetails.push({
             ID: items?.ID,
             ProjectID: items?.ProjectID,
-            Lead: items?.Lead?.FirstName,
-            LeadId: items?.LeadId,
+            AccountManager: items?.AccountManager,
             AccountName: items?.AccountName,
             ProjectName: items?.ProjectName,
             StartDate: items?.StartDate,
@@ -358,6 +358,11 @@ const Projects = (props: IProps): JSX.Element => {
     );
   };
 
+  //Render Account Manager Column function:
+  const renderAccountManagerColumn = (rowData: IProjectData) => {
+    return <div>{rowData?.AccountManager ? rowData?.AccountManager : "-"}</div>;
+  };
+
   //Render Delivery Heads Column function:
   const renderDeliveryHeadsColumn = (rowData: IProjectData) => {
     const deliveryHeads: IPeoplePickerDetails[] = rowData?.DeliveryHead;
@@ -413,8 +418,8 @@ const Projects = (props: IProps): JSX.Element => {
       const matchProjectID = item?.ProjectID?.toLowerCase().includes(
         filterValues.ProjectID.toLowerCase()
       );
-      const matchLead = item?.Lead?.toLowerCase().includes(
-        filterValues.Lead.toLowerCase()
+      const matchLead = item?.AccountManager?.toLowerCase().includes(
+        filterValues.AccountManager.toLowerCase()
       );
       const matchAccount = item?.AccountName?.toLowerCase().includes(
         filterValues.AccountName.toLowerCase()
@@ -455,7 +460,7 @@ const Projects = (props: IProps): JSX.Element => {
         item?.DeliveryHead?.map((dh) => dh.name?.toLowerCase()).join(" ") || "";
       return (
         item.ProjectID?.toLowerCase().includes(val.toLowerCase()) ||
-        item.Lead?.toLowerCase().includes(val.toLowerCase()) ||
+        item.AccountManager?.toLowerCase().includes(val.toLowerCase()) ||
         item.AccountName?.toLowerCase().includes(val.toLowerCase()) ||
         item.ProjectName?.toLowerCase().includes(val.toLowerCase()) ||
         item.ProjectStatus?.toLowerCase().includes(val.toLowerCase()) ||
@@ -488,9 +493,9 @@ const Projects = (props: IProps): JSX.Element => {
         name: "Account Name",
       },
       {
-        key: "Lead",
-        type: "Lookup",
-        name: "Lead",
+        key: "AccountManager",
+        type: "Text",
+        name: "Account manager",
       },
       {
         key: "ProjectManager",
@@ -564,35 +569,7 @@ const Projects = (props: IProps): JSX.Element => {
     );
   };
 
-  //only edit options shows conditions:
-  // const isEditable = (rowData: IProjectData) => {
-  //   return (
-  //     PMOusers?.some(
-  //       (user) =>
-  //         user?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase() &&
-  //         (rowData?.ProjectStatus == "0" ||
-  //           rowData?.ProjectStatus == "4" ||
-  //           rowData?.ProjectStatus == "5" ||
-  //           rowData?.ProjectStatus == "1")
-  //     ) ||
-  //     (rowData?.ProjectManager?.some(
-  //       (pm: IPeoplePickerDetails) =>
-  //         pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-  //     ) &&
-  //       (rowData?.ProjectStatus == "2" ||
-  //         (rowData?.ProjectStatus == "6" &&
-  //           billingsDetails?.some(
-  //             (bill: any) =>
-  //               bill?.ProjectId === rowData?.ID &&
-  //               (bill?.Status == "0" || bill?.Status == "4")
-  //           )))) ||
-  //     (rowData?.DeliveryHead?.some(
-  //       (pm: IPeoplePickerDetails) =>
-  //         pm?.email?.toLowerCase() === props?.loginUserEmail?.toLowerCase()
-  //     ) &&
-  //       rowData?.ProjectStatus == "3")
-  //   );
-  // };
+  //Check whether the user is editable or not:
   const isEditable = (rowData: IProjectData) => {
     const isPMOUser = PMOusers?.some(
       (user) =>
@@ -633,6 +610,40 @@ const Projects = (props: IProps): JSX.Element => {
             )))) ||
       (isDeliveryHead && rowData?.ProjectStatus == "3")
     );
+  };
+
+  //Open Project Folder function:
+  const handleOpenProjectFolder = async (rowData: any, spfxContext: any) => {
+    try {
+      const accountName = rowData?.AccountName?.trim();
+      const libraryName = Config.LibraryNames.ProjectFolderStructure;
+      const siteUrl = spfxContext?.pageContext?.web?.absoluteUrl;
+      const serverRelativeUrl =
+        spfxContext?.pageContext?.web?.serverRelativeUrl;
+
+      const folderServerRelativeUrl = `${serverRelativeUrl}/${libraryName}/${accountName}`;
+
+      //Check if folder exists
+      const folderExists = await sp.web
+        .getFolderByServerRelativePath(folderServerRelativeUrl)
+        .select("Exists")
+        .get()
+        .then((res) => res?.Exists)
+        .catch(() => false);
+
+      //Open the folder or library based on existence
+      if (folderExists) {
+        window.open(`${siteUrl}/${libraryName}/${accountName}`, "_blank");
+      } else {
+        window.open(`${siteUrl}/${libraryName}/Forms/AllItems.aspx`, "_blank");
+      }
+    } catch (err) {
+      console.error("Error opening project folder:", err);
+      window.open(
+        `${spfxContext?.pageContext?.web?.absoluteUrl}/ProjectFolderStructure/Forms/AllItems.aspx`,
+        "_blank"
+      );
+    }
   };
 
   //ChangeLog Cancel function:
@@ -695,7 +706,7 @@ const Projects = (props: IProps): JSX.Element => {
                     setSearchVal("");
                     setFilterValues({
                       ProjectID: "",
-                      Lead: "",
+                      AccountManager: "",
                       AccountName: "",
                       ProjectStatus: "",
                       BillingModel: "",
@@ -767,10 +778,12 @@ const Projects = (props: IProps): JSX.Element => {
                 />
               </div>
               <div className={styles.filterField}>
-                <label>Lead</label>
+                <label>Account manager</label>
                 <InputText
-                  value={filterValues?.Lead}
-                  onChange={(e) => handleFilterChange("Lead", e.target.value)}
+                  value={filterValues?.AccountManager}
+                  onChange={(e) =>
+                    handleFilterChange("AccountManager", e.target.value)
+                  }
                   placeholder="Enter here"
                 />
               </div>
@@ -821,7 +834,7 @@ const Projects = (props: IProps): JSX.Element => {
                     setSearchVal("");
                     setFilterValues({
                       ProjectID: "",
-                      Lead: "",
+                      AccountManager: "",
                       AccountName: "",
                       ProjectStatus: "",
                       BillingModel: "",
@@ -864,7 +877,12 @@ const Projects = (props: IProps): JSX.Element => {
                 field="AccountName"
                 header="Account name"
               ></Column>
-              <Column sortable field="Lead" header="Lead"></Column>
+              <Column
+                sortable
+                field="AccountManager"
+                header="Account manager"
+                body={renderAccountManagerColumn}
+              ></Column>
               <Column
                 sortable
                 field="ProjectManager"
@@ -954,7 +972,6 @@ const Projects = (props: IProps): JSX.Element => {
                       ) : (
                         ""
                       )}
-
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
@@ -972,9 +989,9 @@ const Projects = (props: IProps): JSX.Element => {
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(
-                              `${props?.spfxContext?.pageContext?.web?.absoluteUrl}/ProjectFolderStructure/Forms/AllItems.aspx`,
-                              "_blank"
+                            handleOpenProjectFolder(
+                              rowData,
+                              props?.spfxContext
                             );
                           }}
                         >
@@ -982,10 +999,9 @@ const Projects = (props: IProps): JSX.Element => {
                             title="Project Folder Structure"
                             src={FolderImage}
                             alt="no image"
-                          ></img>
+                          />
                         </div>
                       )}
-
                       {(rowData?.ProjectStatus == "4" ||
                         rowData?.ProjectStatus == "5") && (
                         <div
